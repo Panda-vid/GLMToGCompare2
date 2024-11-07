@@ -3,27 +3,30 @@ from transformers import AutoTokenizer, AutoModel, T5ForConditionalGeneration
 modelcard = 'plenz/GLM-t5-large'  
 modelcard_generation = 't5-large' 
 
-print('load the model and tokenizer')
-model_generation = T5ForConditionalGeneration.from_pretrained(modelcard_generation)
-del model_generation.encoder  # we only need the decoder for generation. Deleting the encoder is optional, but saves memory.
+from transformers import AutoTokenizer, AutoModel
+
+modelcard = 'plenz/GLM-flan-t5-small'
+
+print('Load the model and tokenizer')
 model = AutoModel.from_pretrained(modelcard, trust_remote_code=True, revision='main')
 tokenizer = AutoTokenizer.from_pretrained(modelcard)
 
-
 print('get dummy input (2 instances to show batching)')
 graph_1 = [
-    ('Jennings Randolph Bridge', 'crosses', '<extra_id_0>')
+    ('black poodle', 'is a', 'dog'),
+    ('dog', 'is a', 'animal'),
+    ('cat', 'is a', 'animal')
 ]
-text_1 = "Over which river does Jennings Randolph Bridge cross?"
+text_1 = 'The dog chased the cat.'
 
 graph_2 = [
     ('dog', 'is a', 'animal'),
-    ('dog', '<extra_id_0>', 'tail'),
+    ('dog', 'has', 'tail'),
     ('dog', 'has', 'fur'),
     ('fish', 'is a', 'animal'),
-    ('fish', 'has', 'fins')
+    ('fish', 'has', 'scales')
 ]
-text_2 = "Dogs have tails and fish have fins. Both are animals."  # T5 MLM
+text_2 = None  # only graph for this instance
 
 print('prepare model inputs')
 how = 'global'  # can be 'global' or 'local', depending on whether the local or global GLM should be used. See paper for more details. 
@@ -35,7 +38,6 @@ model_inputs = model.data_processor.to_batch(data_instances=datas, tokenizer=tok
 print('compute token encodings')
 outputs = model(**model_inputs)
 
-print('generate conditional on encoded graph and text')
-outputs = model_generation.generate(encoder_outputs=outputs, max_new_tokens=10)
-print('generation 1:', tokenizer.decode(outputs[0], skip_special_tokens=True))
-print('generation 2:', tokenizer.decode(outputs[1], skip_special_tokens=False))
+# get token embeddings
+print('Sequence of tokens (batch_size, max_seq_len, embedding_dim):', outputs.last_hidden_state.shape)  # embeddings of all graph and text tokens. Nodes in the graph (e.g., dog) appear only once in the sequence.
+print('embedding of `black poodle` in the first instance. Shape is (seq_len, embedding_dim):', model.data_processor.get_embedding(sequence_embedding=outputs.last_hidden_state[0], indices=data_1.indices, embedding_aggregation='seq').shape)  # embedding_aggregation can be 'seq' or 'mean'. 'seq' returns the sequence of embeddings (e.g., all tokens of `black poodle`), 'mean' returns the mean of the embeddings.
