@@ -1,24 +1,24 @@
-import json
-from pathlib import Path
-from random import randint
-from typing import Callable, Dict
-
 import torch
 import numpy as np
 
+from pathlib import Path
+from typing import Callable
+
+from accelerate import Accelerator
 from tqdm import tqdm
+from torch.utils.data import DataLoader
+
+from GraphLanguageModel.pipelines.data_handling import GraphDataset, create_collate_fn
 from GraphLanguageModel.pipelines.recipies import ModelRecipe
 from GraphLanguageModel.pipelines.util import accuracy
 
 
 class EvalPipeline:
-    def __init__(self, is_classification: bool, eval_data: Path, batch_size: int, 
-                 score_func: Callable[[torch.Tensor, torch.Tensor], float], 
-                 repetitions: int, tokenizer, encoder, generator,
-                 max_generation_len: int, graph_encoder_strategy: str, device: str) -> None:
-        self.is_classification = is_classification
-        self.eval_data = eval_data
-        self.batch_size = batch_size
+    def __init__(self, accelerator: Accelerator, dataloader: DataLoader, score_func: Callable[[torch.Tensor, torch.Tensor], float], repetitions: int, 
+                 tokenizer, encoder, generator, max_generation_len: int, data_name: str = "") -> None:
+        self.accelerator = accelerator
+        self.dataloader = dataloader
+        self.data_name = data_name
         self.score_func = score_func
         self.repetitions = repetitions
         
@@ -26,30 +26,6 @@ class EvalPipeline:
         self.encoder = encoder
         self.generator = generator
         self.max_generation_len = max_generation_len
-        self.graph_encoder_strategy = graph_encoder_strategy
-
-        self.device = device
-        self.total = self._get_file_total()
-
-    def _get_file_total(self):
-        with self.eval_data.open("r") as data_file:
-            total = len(data_file.readlines())
-        return int(total/self.batch_size) + 1
-
-    def batcher(self):
-        with self.eval_data.open("r") as data_file:
-            batch = []
-            labels = []
-            for i, instance in enumerate(data_file):
-                inp, label = self._convert_data_instance(json.loads(instance))
-                batch.append(inp)
-                labels.append(label)
-                if ((i + 1) % self.batch_size) == 0 or i + 1 == self.total:
-                    inputs = self.data_processor.to_batch(data_instances=batch, tokenizer=self.tokenizer, max_seq_len = 512, device=self.device)
-                    labels = self.tokenizer(labels, return_tensors="pt", padding=True).input_ids.to(device=self.device)[:, :-1]
-                    yield inputs, labels
-                    batch = []
-                    labels = []
 
     def eval(self):
         self.encoder.eval()
@@ -62,29 +38,21 @@ class EvalPipeline:
 
     def eval_round(self):
         scores = []
-        with tqdm(self.batcher(), postfix=f"Evaluating on {self.eval_data.name}", total=self.total) as pbar:
+        with tqdm(self.dataloader, postfix=f"Evaluating on {self.data_name}", total=len(self.dataloader), disable=(not self.accelerator.is_local_main_process)) as pbar:
             for inputs, labels in pbar:
                 with torch.no_grad():
-                    outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), output_scores=True, max_new_tokens=self.max_generation_len, early_stopping=True)[:, :labels.shape[1]]
+                    outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), output_scores=True, 
+                                                      max_new_tokens=self.max_generation_len, early_stopping=True)[:, :labels.shape[1]]
                 predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-                del outputs
                 labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-                batch_score = self.score_func(predictions, labels)
-                scores.append(batch_score)
-                pbar.set_description_str(f"Score last batch: {batch_score}")
-                torch.cuda.empty_cache()
-        return torch.tensor(scores).mean()
 
-    def _convert_data_instance(self, instance: Dict):
-        graph = instance["graph"]
-        label = "<pad><extra_id_0> " + instance["output"][0] if self.is_classification else instance["output"][0]
-        text = None
-        if "text" in instance.keys():
-            text = self._convert_text_data(instance["text"])
-        return self.data_processor.encode_graph(tokenizer=self.tokenizer, g=graph, text=text, how=self.graph_encoder_strategy), label
-    
-    def _convert_text_data(self, text_instance):
-        return text_instance[randint(0, len(text_instance) - 1)] if isinstance(text_instance, list) else text_instance
+                batch_score = self.score_func(predictions, labels)
+                batch_scores = np.array(self.accelerator.gather(batch_score))
+                scores.append(batch_scores.mean())
+
+                pbar.set_description_str(f"Score last batch: {batch_score}")
+
+        return torch.tensor(scores).mean()
 
     @property
     def data_processor(self):
@@ -102,7 +70,6 @@ class Builder:
 
         self.reporting_interval = 5
         self.checkpointing_interval = 5
-        self.device = "cpu"
 
     def is_classification_task(self, is_classification: bool):
         self.is_classification = is_classification
@@ -123,10 +90,6 @@ class Builder:
     def set_batch_size(self, batch_size: int):
         self.batch_size = batch_size
         return self
-
-    def set_device(self, device: str):
-        self.device = device
-        return self
     
     def set_repetitions(self, repetitions: int):
         self.repetitions = repetitions
@@ -139,15 +102,17 @@ class Builder:
     def build(self) -> EvalPipeline:
         if not self._buildable():
             raise ValueError(self._generate_error_msg())
-        tokenizer, encoder, generator = self.model_recipe.build(self.device)
-        return EvalPipeline(self.is_classification, self.eval_data, self.batch_size, 
-                            self.score_func, self.repetitions, tokenizer, encoder, generator, 
-                            self.model_recipe.max_generation_len, 
-                            self.model_recipe.graph_encoder_strategy, self.device)
+        tokenizer, encoder, generator = self.model_recipe.build()
+        dataloader = DataLoader(self._create_dataset(), batch_size=self.batch_size, 
+                                collate_fn=create_collate_fn(encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
+        return EvalPipeline(dataloader, self.score_func, self.repetitions, tokenizer, encoder, generator, self.model_recipe.max_generation_len, data_name=self.eval_data.name)
 
     def _buildable(self) -> bool:
         return self.is_classification is not None and self.model_recipe is not None
     
+    def _create_dataset(self, data_processor, tokenizer):
+        return GraphDataset(self.eval_data, data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.is_classification)
+
     def _generate_error_msg(self) -> str:
         msg = ""
         if self.model_recipe is None:

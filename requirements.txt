@@ -78,3 +78,4 @@ accelerate==0.31.0
 qwikidata
 requests
 textblob
+deepspeed
