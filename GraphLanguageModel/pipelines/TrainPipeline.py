@@ -166,7 +166,7 @@ class Builder:
     def build(self) -> TrainPipeline:
         if not self._buildable():
             raise ValueError(self._generate_error_msg())
-        accelerator = Accelerator(mixed_precision="bf16")
+        accelerator = Accelerator()
         tokenizer, encoder, generator = self.model_recipe.build()
         optimizer = self.train_recipe.build(list(encoder.parameters()) + list(generator.parameters()))
         train_dataloader = DataLoader(self._create_dataset(encoder.data_processor, tokenizer), batch_size=self.train_recipe.batch_size,

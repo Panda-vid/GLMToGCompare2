@@ -46,8 +46,8 @@ class EvalPipeline:
                 predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
                 labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-                batch_score = self.score_func(predictions, labels)
-                batch_scores = np.array(self.accelerator.gather(batch_score))
+                batch_score = torch.tensor(self.score_func(predictions, labels))
+                batch_scores = self.accelerator.gather(batch_score)
                 scores.append(batch_scores.mean())
 
                 pbar.set_description_str(f"Score last batch: {batch_score}")
