@@ -171,30 +171,35 @@ class Builder:
             raise ValueError(self._generate_error_msg())
         tokenizer, encoder, generator = self.model_recipe.build()
         optimizer = self.train_recipe.build(list(encoder.parameters()) + list(generator.parameters()))
+        train_dataloader, eval_dataloader = self._prepare_dataloaders(encoder.data_processor, tokenizer)
+
         accelerator = Accelerator()
-        if accelerator.is_local_main_process:
-            train_dataloader = DataLoader(self._create_dataset(encoder.data_processor, tokenizer), batch_size=self.train_recipe.batch_size,
-                                    collate_fn=create_collate_fn(accelerator.device, encoder.data_processor, tokenizer, self.model_recipe.max_generation_len),
-                                    shuffle=True)
+        encoder, generator, train_dataloader, optimizer = accelerator.prepare(encoder, generator, train_dataloader, optimizer)
         if self.eval_data is not None:
-            if accelerator.is_local_main_process:
-                eval_dataset = GraphDataset(self.eval_data, encoder.data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.train_recipe.is_classification)
-                eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size,
-                                        collate_fn=create_collate_fn(accelerator.device, encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
-            accelerator.prepare(encoder, generator, train_dataloader, eval_dataloader, optimizer)
+            eval_dataloader = accelerator.prepare(eval_dataloader)
             eval_pipeline = self._create_eval_pipeline(accelerator, eval_dataloader, tokenizer, encoder, generator)
             return TrainPipeline(accelerator, train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
                                 optimizer, tokenizer, encoder, generator, self.checkpointing_interval,
                                 save_location=self.save_location, eval_pipeline=eval_pipeline, 
                                 data_name=self.train_recipe.train_data.name)
         else:
-            accelerator.prepare(encoder, generator, train_dataloader, optimizer)
             return TrainPipeline(accelerator, train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
                                 optimizer, tokenizer, encoder, generator, self.checkpointing_interval,
                                 save_location=self.save_location, data_name=self.train_recipe.train_data.name)
     
     def _buildable(self) -> bool:
         return self.train_recipe is not None or self.model_recipe is not None or self.save_location is not None
+    
+    def _prepare_dataloaders(self, data_processor, tokenizer):
+        train_dataloader = DataLoader(self._create_dataset(data_processor, tokenizer), batch_size=self.train_recipe.batch_size,
+                                collate_fn=create_collate_fn("cpu", data_processor, tokenizer, self.model_recipe.max_generation_len),
+                                shuffle=True)
+        eval_dataloader = None
+        if self.eval_data is not None:
+            eval_dataset = GraphDataset(self.eval_data, data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.train_recipe.is_classification)
+            eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size,
+                                    collate_fn=create_collate_fn("cpu", data_processor, tokenizer, self.model_recipe.max_generation_len))
+        return train_dataloader, eval_dataloader
     
     def _create_dataset(self, data_processor, tokenizer):
         return GraphDataset(self.train_recipe.train_data, data_processor, tokenizer, self.model_recipe.graph_encoder_strategy,
