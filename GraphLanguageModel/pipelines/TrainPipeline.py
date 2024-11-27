@@ -77,18 +77,17 @@ class TrainPipeline:
                 batch_losses = self.accelerator.gather(batch_loss)
                 self.accelerator.backward(batch_loss)
                 self.optimizer.step()
-                self.running_loss += batch_loss
                 del batch_loss
                 
-                self.batches_since_report += 1
                 self.progress[1] += self.batch_size
                 index += 1
                 if self.accelerator.is_local_main_process:
-                    pbar.set_description_str(f"Average loss last batch: {self.running_loss/self.batches_since_report}")
+                    parallel_batch_loss = batch_losses.mean()
+                    self.running_loss += parallel_batch_loss
+                    pbar.set_description_str(f"Average loss last batch: {parallel_batch_loss}")
                     pbar.update(len(batch_losses))
                     self._save_if_necessary(index)
                   
-
     def eval_run(self):
         return self.eval_pipeline.eval() if self.eval_pipeline is not None else (float("inf"), 0)    
     
