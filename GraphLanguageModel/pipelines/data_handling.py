@@ -52,7 +52,7 @@ def create_collate_fn(device, data_processor, tokenizer, max_generation_len):
             labels.append(label)
         return (
             data_processor.to_batch(data_instances=inputs, tokenizer=tokenizer, max_seq_len=max_generation_len, device=device),
-            tokenizer(labels, return_tensors="pt", padding=True).input_ids.to(device)
+            tokenizer(labels, return_tensors="pt", padding=True).input_ids
         )
     return collate_fn
 
