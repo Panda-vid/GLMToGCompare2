@@ -41,8 +41,7 @@ class EvalPipeline:
         with tqdm(self.dataloader, postfix=f"Evaluating on {self.data_name}", total=len(self.dataloader), disable=(not self.accelerator.is_local_main_process)) as pbar:
             for inputs, labels in pbar:
                 with torch.no_grad():
-                    outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), output_scores=True, 
-                                                      max_new_tokens=self.max_generation_len, early_stopping=True)[:, :labels.shape[1]]
+                    outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)[:, :labels.shape[1]]
                 predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
                 labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
 
