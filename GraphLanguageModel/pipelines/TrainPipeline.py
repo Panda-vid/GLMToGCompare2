@@ -179,8 +179,8 @@ class Builder:
             eval_dataset = GraphDataset(self.eval_data, encoder.data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.train_recipe.is_classification)
             eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size,
                                     collate_fn=create_collate_fn(accelerator.device, encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
-            eval_pipeline = self._create_eval_pipeline(accelerator, eval_dataloader, tokenizer, encoder, generator)
             accelerator.prepare(encoder, generator, train_dataloader, eval_dataloader, optimizer)
+            eval_pipeline = self._create_eval_pipeline(accelerator, eval_dataloader, tokenizer, encoder, generator)
             return TrainPipeline(accelerator, train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
                                 optimizer, tokenizer, encoder, generator, self.checkpointing_interval,
                                 save_location=self.save_location, eval_pipeline=eval_pipeline, 
