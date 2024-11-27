@@ -10,7 +10,6 @@
 # Extract compressed input dataset on local SSD
 tar -C $TMPDIR/ -xvzf $(ws_find data-fast)/data.tgz
 
-
 export PYTHONPATH="$HOME/GLMToGCompare2/"
 
 SCRIPT_DIR="$(dirname "$0")"

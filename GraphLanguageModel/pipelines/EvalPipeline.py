@@ -48,10 +48,11 @@ class EvalPipeline:
 
                 batch_score = torch.tensor(self.score_func(predictions, labels)).cuda(device=self.accelerator.device)
                 batch_scores = self.accelerator.gather(batch_score)
-                scores.append(batch_scores.mean())
+                parallel_batch_score = batch_scores.mean()
+                scores.append(parallel_batch_score)
 
-                pbar.set_description_str(f"Score last batch: {batch_score}")
                 if self.accelerator.is_local_main_process:
+                    pbar.set_description_str(f"Score last batch: {parallel_batch_score}")
                     pbar.update(len(batch_scores))
 
         return torch.tensor(scores).mean()

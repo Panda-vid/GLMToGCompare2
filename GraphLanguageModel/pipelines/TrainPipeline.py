@@ -81,8 +81,9 @@ class TrainPipeline:
                 
                 self.batches_since_report += 1
                 self.progress[1] += self.batch_size
-                pbar.set_description_str(f"Average loss last batch: {self.running_loss/self.batches_since_report}")
                 if self.accelerator.is_local_main_process:
+                    self.accelerator.wait_for_everyone()
+                    pbar.set_description_str(f"Average loss last batch: {self.running_loss/self.batches_since_report}")
                     pbar.update(len(batch_losses))
                 self._save_if_necessary(i)  
 
