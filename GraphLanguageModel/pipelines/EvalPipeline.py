@@ -52,7 +52,6 @@ class EvalPipeline:
                 scores.append(parallel_batch_score)
 
                 if self.accelerator.is_local_main_process:
-                    self.accelerator.wait_for_everyone()
                     pbar.set_description_str(f"Score last batch: {parallel_batch_score}")
                     pbar.update(len(batch_scores))
 

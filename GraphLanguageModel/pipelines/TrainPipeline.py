@@ -67,6 +67,7 @@ class TrainPipeline:
         self.running_loss = 0
         self.batches_since_report = 0
         batch_progress = int(self.progress[1]/self.batch_size)
+        index = 0
         with tqdm(enumerate(self.dataloader, start=batch_progress), postfix=f"Training {self.data_name}", 
                             total=len(self.dataloader) - batch_progress, disable=(not self.accelerator.is_local_main_process)) as pbar:
             for i, (inputs, labels) in pbar:
@@ -81,11 +82,12 @@ class TrainPipeline:
                 
                 self.batches_since_report += 1
                 self.progress[1] += self.batch_size
+                index += 1
                 if self.accelerator.is_local_main_process:
-                    self.accelerator.wait_for_everyone()
                     pbar.set_description_str(f"Average loss last batch: {self.running_loss/self.batches_since_report}")
                     pbar.update(len(batch_losses))
-                self._save_if_necessary(i)  
+                    self._save_if_necessary(index)
+                  
 
     def eval_run(self):
         return self.eval_pipeline.eval() if self.eval_pipeline is not None else (float("inf"), 0)    
