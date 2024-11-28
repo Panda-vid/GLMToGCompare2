@@ -84,8 +84,7 @@ class TrainPipeline:
                 if self.accelerator.is_local_main_process:
                     parallel_batch_loss = batch_losses.mean()
                     self.running_loss += parallel_batch_loss
-                    pbar.set_description_str(f"Average loss last batch: {parallel_batch_loss}")
-                    pbar.update(len(batch_losses))
+                    pbar.set_description_str(f"Average loss last {len(batch_losses)} batches: {parallel_batch_loss}")
                     self._save_if_necessary(index)
                   
     def eval_run(self):
