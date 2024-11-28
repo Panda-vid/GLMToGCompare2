@@ -1,3 +1,4 @@
+from multiprocessing import Pool
 from typing import List
 import torch
 from torch.nn import functional as f
@@ -10,11 +11,9 @@ def token_accuracy(predictions: torch.Tensor, labels: torch.Tensor) -> float:
 
 
 def accuracy(predictions: List[str], labels: List[str]):
-    s = 0
     total = len(predictions)
-    for label, prediction in zip(labels, predictions):
-        if label == prediction:
-            s += 1
+    with Pool(8) as pool:
+        s = sum(pool.map(lambda tup: tup[0] == tup[1], zip(predictions, labels)))
     return s/total
 
 
@@ -26,3 +25,6 @@ def cross_entropy_manual(pred, groundtruth, ignore_index):
     loss_manual.backward()
     return loss_manual
     
+
+def compare(pred: str, label: str):
+    return pred == label
