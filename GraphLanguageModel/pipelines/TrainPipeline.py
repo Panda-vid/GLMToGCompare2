@@ -196,7 +196,7 @@ class Builder:
         eval_dataloader = None
         if self.eval_data is not None:
             eval_dataset = GraphDataset(self.eval_data, data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.train_recipe.is_classification)
-            eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size,
+            eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size*2,
                                     collate_fn=create_collate_fn("cpu", data_processor, tokenizer, self.model_recipe.max_generation_len))
         return train_dataloader, eval_dataloader
     
