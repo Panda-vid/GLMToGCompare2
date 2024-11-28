@@ -12,7 +12,7 @@ def token_accuracy(predictions: torch.Tensor, labels: torch.Tensor) -> float:
 
 def accuracy(predictions: List[str], labels: List[str]):
     total = len(predictions)
-    with Pool(8) as pool:
+    with Pool(16) as pool:
         s = sum(pool.map(lambda tup: tup[0] == tup[1], zip(predictions, labels)))
     return s/total
 
