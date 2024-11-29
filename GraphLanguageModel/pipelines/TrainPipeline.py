@@ -52,7 +52,8 @@ class TrainPipeline:
     def train(self):
         if self.eval_pipeline is not None:
             self.last_accuracy, _ = self.eval_run()
-            print(f"Score before training: {self.last_accuracy}")
+            if self.accelerator.is_local_main_process:
+                print(f"Score before training: {self.last_accuracy}")
         for epoch in range(self.num_epochs):
             if epoch > self.progress[0]:
                 self.encoder.train()
@@ -93,7 +94,8 @@ class TrainPipeline:
     def _increment_early_stopping(self):
         if self.eval_pipeline is not None:
             avg_score, _ = self.eval_run()
-            print(f"Score after last epoch: {avg_score}")
+            if self.accelerator.is_local_main_process:
+                print(f"Score after last epoch: {avg_score}")
             if self.last_accuracy > avg_score:
                 self.abort += 1
             else:
