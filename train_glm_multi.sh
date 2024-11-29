@@ -4,6 +4,8 @@
 #SBATCH --mem=64gb
 #SBATCH --gres=gpu:4
 
+# set up enviroment for cuda
+module load devel/cuda/12.4
 # Extract compressed input dataset on local SSD
 tar -C $TMPDIR/ -xvzf $(ws_find data-fast)/data.tgz
 
