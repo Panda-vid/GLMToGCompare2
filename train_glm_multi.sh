@@ -1,14 +1,13 @@
 #!/bin/bash
 #SBATCH --ntasks=10
-#SBATCH --time=120
+#SBATCH --time=48:00:00
 #SBATCH --mem=64gb
 #SBATCH --job-name=trex-large
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:4
 #SBATCH -o "./trex-large.o"
 #SBATCH --error="./trex-large.e"
 
 # Extract compressed input dataset on local SSD
-echo extracting data files onto $TMPDIR
 tar -C $TMPDIR/ -xvzf $(ws_find data-fast)/data.tgz
 
 export PYTHONPATH="$HOME/GLMToGCompare2/"
@@ -72,16 +71,15 @@ if [ -c "$CHEKCPOINTING_INTERVAL"]; then
         CHECKPOINTING_INTERVAL=500
 fi
 
-# activate venv
-source $HOME/GLMToGCompare2/.venv/bin/activate
 # Path to the Python program
+source $HOME/GLMToGCompare2/.venv/bin/activate
 PYTHON_PROGRAM="$HOME/GLMToGCompare2/GraphLanguageModel/train_glm.py"
 
 # Start the Python program with inputs
-echo accelerate launch "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+echo starting python3 "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
-accelerate launch --mixed_precision=bf16 --dynamo_backend=cudagraphs --num_machines 1  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=no  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
 
