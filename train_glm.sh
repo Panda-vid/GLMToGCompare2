@@ -12,6 +12,7 @@ echo extracting data files onto $TMPDIR
 tar -C $TMPDIR/ -xvzf $(ws_find data-fast)/data.tgz
 
 export PYTHONPATH="$HOME/GLMToGCompare2/"
+export TOKENIZERS_PARALLELISM=true
 
 SCRIPT_DIR="$(dirname "$0")"
 # Define input variables for the Python program

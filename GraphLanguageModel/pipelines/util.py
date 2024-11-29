@@ -9,12 +9,13 @@ def token_accuracy(predictions: torch.Tensor, labels: torch.Tensor) -> float:
     total_overlap = torch.where(predictions == labels, 1, 0).sum()
     return total_overlap/total_size
 
-
-def accuracy(predictions: List[str], labels: List[str]):
-    total = len(predictions)
-    with Pool(16) as pool:
+def create_multiprocessed_accuracy(poolsize: int):
+    pool = Pool(poolsize)
+    def accuracy(predictions: List[str], labels: List[str]):
+        total = len(predictions)
         s = sum(pool.map(compare, zip(predictions, labels)))
-    return s/total
+        return s/total
+    return accuracy
 
 
 def cross_entropy_manual(pred, groundtruth, ignore_index):
