@@ -82,4 +82,4 @@ accelerate launch --mixed_precision=bf16 --dynamo_backend=cudagraphs --num_machi
         -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
 
-rsync -av $SAVE_LOCATION $(ws_find data-fast)/saved_models-${SLURM_JOB_ID}/
+rsync -av $TMPDIR/saved_models $(ws_find data-fast)/saved_models-${SLURM_JOB_ID}/
