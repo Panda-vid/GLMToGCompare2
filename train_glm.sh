@@ -2,10 +2,7 @@
 #SBATCH --ntasks=10
 #SBATCH --time=120
 #SBATCH --mem=64gb
-#SBATCH --job-name=trex-large
 #SBATCH --gres=gpu:1
-#SBATCH -o "./trex-large.o"
-#SBATCH --error="./trex-large.e"
 
 # Extract compressed input dataset on local SSD
 echo extracting data files onto $TMPDIR
