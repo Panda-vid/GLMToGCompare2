@@ -12,63 +12,87 @@ tar -C $TMPDIR/ -xvzf $(ws_find data-fast)/data.tgz
 export PYTHONPATH="$HOME/GLMToGCompare2/"
 export TOKENIZERS_PARALLELISM=true
 
-# Define input variables for the Python program
-ENCODER_MODELCARD=""
-if [ -e "$ENCODER_MODELCARD" ]; then
-        ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
-fi
-GENERATOR_MODELCARD=""
-if [ -g "$GENERATOR_MODELCARD" ]; then
-        GENERATOR_MODELCARD="google/flan-t5-large"
-fi
-TRAIN_FILE=""
-if [ -t "$TRAIN_FILE" ]; then
-        TRAIN_FILE="$TMPDIR/data/preprocessed/trex-train-kilt.jsonl"
-fi
-SAVE_LOCATION=""
-if [ -s "$SAVE_LOCATION"]; then
-        SAVE_LOCATION="$TMPDIR/saved_models/trex/flan-t5-large"
-fi
-PROBLEM_TYPE=""
-if [ -p "$PROBLEM_TYPE"]; then
-        PROBLEM_TYPE="classification"
-fi
-GLM_TYPE=""
-if [ -l "$GLM_TYPE"]; then
-        GLM_TYPE="global"
-fi
-BATCH_SIZE=""
-if [ -b "$BATCH_SIZE"]; then
-        BATCH_SIZE=128
-fi
-OPTIMIZER=""
-if [ -o "$OPTIMIZER"]; then
-        OPTIMIZER="AdamW"
-fi
-LEARNING_RATE=""
-if [ -a "$LEARNING_RATE"]; then
-        LEARNING_RATE="1e-4"
-fi
-NUM_EPOCHS=""
-if [ -n "$NUM_EPOCHS"]; then
-        NUM_EPOCHS=5
-fi
-EARLY_STOPPING=""
-if [ -s "$EARLY_STOPPING"]; then
-        EARLY_STOPPING=2
-fi
-NEIGHBORHOOD_SIZE=""
-if [ -k "$NEIGHBORHOOD_SIZE"]; then
-        NEIGHBORHOOD_SIZE=10
-fi
-EVAL_FILE=""
-if [ -d "$EVAL_FILE"]; then
-        EVAL_FILE="$TMPDIR/data/preprocessed/trex-dev-kilt.jsonl"
-fi
-CHECKPOINTING_INTERVAL=""
-if [ -c "$CHEKCPOINTING_INTERVAL"]; then
-        CHECKPOINTING_INTERVAL=500
-fi
+# Default values
+ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
+GENERATOR_MODELCARD="google/flan-t5-large"
+TRAIN_FILE="$TMPDIR/data/preprocessed/trex-train-kilt.jsonl"
+SAVE_LOCATION="$TMPDIR/saved_models/trex/flan-t5-large"
+PROBLEM_TYPE="classification"
+GLM_TYPE="global"
+BATCH_SIZE=128
+OPTIMIZER="AdamW"
+LEARNING_RATE="1e-4"
+NUM_EPOCHS=5
+EARLY_STOPPING=2
+NEIGHBORHOOD_SIZE=10
+EVAL_FILE="$TMPDIR/data/preprocessed/trex-dev-kilt.jsonl"
+CHECKPOINTING_INTERVAL=500
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -e)
+            ENCODER_MODELCARD="$2"
+            shift 2
+            ;;
+        -g)
+            GENERATOR_MODELCARD="$2"
+            shift 2
+            ;;
+        -t)
+            TRAIN_FILE="$2"
+            shift 2
+            ;;
+        -s)
+            SAVE_LOCATION="$2"
+            shift 2
+            ;;
+        -p)
+            PROBLEM_TYPE="$2"
+            shift 2
+            ;;
+        -l)
+            GLM_TYPE="$2"
+            shift 2
+            ;;
+        -b)
+            BATCH_SIZE="$2"
+            shift 2
+            ;;
+        -o)
+            OPTIMIZER="$2"
+            shift 2
+            ;;
+        -a)
+            LEARNING_RATE="$2"
+            shift 2
+            ;;
+        -n)
+            NUM_EPOCHS="$2"
+            shift 2
+            ;;
+        -s)
+            EARLY_STOPPING="$2"
+            shift 2
+            ;;
+        -k)
+            NEIGHBORHOOD_SIZE="$2"
+            shift 2
+            ;;
+        -d)
+            EVAL_FILE="$2"
+            shift 2
+            ;;
+        -c)
+            CHECKPOINTING_INTERVAL="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option $1"
+            exit 1
+            ;;
+    esac
+done
 
 # Path to the Python program
 source $HOME/GLMToGCompare2/.venv/bin/activate
@@ -76,10 +100,10 @@ PYTHON_PROGRAM="$HOME/GLMToGCompare2/GraphLanguageModel/train_glm.py"
 
 # Start the Python program with inputs
 echo starting python3 "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
-        -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
+        -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
 accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=no  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
-        -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
+        -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
 
 rsync -av $TMPDIR/saved_models $(ws_find data-fast)/saved_models-${SLURM_JOB_ID}/

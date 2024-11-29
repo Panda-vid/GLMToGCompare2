@@ -20,7 +20,6 @@ parser.add_argument("save_location",
                     type=str, action=PathAction)
 parser.add_argument("-pt", "--problem_type", choices=["classification", "generation"], default="classification", type=str)
 parser.add_argument("-gt", "--glm_type", help="Select whether to use a global or local GLM.", choices=["local", "global"], default="global", type=str)
-parser.add_argument("-d", "--device", default="cpu", type=str)
 parser.add_argument("-b", "--batch_size", default=64, type=int)
 optimizer_group = parser.add_argument_group("Optimizer")
 optimizer_group.add_argument("-o", "--optimizer", 
