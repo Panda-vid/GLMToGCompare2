@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from GraphLanguageModel.pipelines.data_handling import GraphDataset, create_collate_fn
 from GraphLanguageModel.pipelines.recipies import ModelRecipe
-from GraphLanguageModel.pipelines.util import accuracy, create_multiprocessed_accuracy
+from GraphLanguageModel.pipelines.util import create_multiprocessed_accuracy
 
 
 class EvalPipeline:
