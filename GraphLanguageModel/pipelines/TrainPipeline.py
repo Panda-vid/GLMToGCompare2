@@ -9,7 +9,7 @@ from accelerate import Accelerator
 from GraphLanguageModel.pipelines.EvalPipeline import EvalPipeline
 from GraphLanguageModel.pipelines.data_handling import GraphDataset, create_collate_fn
 from GraphLanguageModel.pipelines.recipies import ModelRecipe, TrainRecipe
-from GraphLanguageModel.pipelines.util import accuracy
+from GraphLanguageModel.pipelines.util import create_multiprocessed_accuracy
 
 
 class TrainPipeline:
@@ -207,7 +207,7 @@ class Builder:
     def _create_eval_pipeline(self, accelerator, dataloader, tokenizer, encoder, generator):
         eval_pipeline = None
         if self.eval_data is not None:
-            eval_pipeline = EvalPipeline(accelerator, dataloader, accuracy, 1, tokenizer, encoder, generator,
+            eval_pipeline = EvalPipeline(accelerator, dataloader, create_multiprocessed_accuracy(16), 1, tokenizer, encoder, generator,
                                          self.model_recipe.max_generation_len, data_name=self.eval_data.name)
         return eval_pipeline
     
