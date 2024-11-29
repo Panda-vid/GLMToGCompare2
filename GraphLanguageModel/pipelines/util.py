@@ -1,5 +1,5 @@
 from multiprocessing import Pool
-from typing import List
+from typing import List, Tuple
 import torch
 from torch.nn import functional as f
 
@@ -26,5 +26,6 @@ def cross_entropy_manual(pred, groundtruth, ignore_index):
     return loss_manual
     
 
-def compare(pred: str, label: str):
+def compare(pred_label_tuple: Tuple[str, str]):
+    pred, label = pred_label_tuple
     return pred == label
