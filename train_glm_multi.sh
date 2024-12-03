@@ -16,8 +16,8 @@ export TOKENIZERS_PARALLELISM=true
 # Default values
 ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
 GENERATOR_MODELCARD="google/flan-t5-large"
-TRAIN_FILE="$TMPDIR/data/preprocessed/trex-train-kilt.jsonl"
-SAVE_LOCATION="$TMPDIR/saved_models/trex/flan-t5-large"
+TRAIN_FILE="/data/preprocessed/trex-train-kilt.jsonl"
+SAVE_LOCATION="$HOME/saved_models/trex/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
 BATCH_SIZE=128
@@ -26,7 +26,7 @@ LEARNING_RATE="1e-4"
 NUM_EPOCHS=5
 EARLY_STOPPING=2
 NEIGHBORHOOD_SIZE=10
-EVAL_FILE="$TMPDIR/data/preprocessed/trex-dev-kilt.jsonl"
+EVAL_FILE="/data/preprocessed/trex-dev-kilt.jsonl"
 CHECKPOINTING_INTERVAL=500
 
 # Parse arguments
@@ -103,8 +103,8 @@ PYTHON_PROGRAM="$HOME/GLMToGCompare2/GraphLanguageModel/train_glm.py"
 echo starting python3 "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
-accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=no  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=no  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TMPDIR/$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
-        -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
+        -ns "$NEIGHBORHOOD_SIZE" -ef "$TMPDIR/$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
 
 rsync -av $TMPDIR/saved_models $(ws_find data-fast)/saved_models-${SLURM_JOB_ID}/
