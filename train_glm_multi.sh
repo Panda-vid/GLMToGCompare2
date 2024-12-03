@@ -7,6 +7,7 @@
 # set up enviroment for cuda
 module load devel/cuda/12.4
 # Extract compressed input dataset on local SSD
+echo extracting data files onto $TMPDIR
 tar -C $TMPDIR/ -xvzf $(ws_find data-fast)/data.tgz
 
 export PYTHONPATH="$HOME/GLMToGCompare2/"
