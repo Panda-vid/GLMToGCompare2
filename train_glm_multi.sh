@@ -1,7 +1,5 @@
 #!/bin/bash
 #SBATCH --ntasks=256
-#SBATCH --time=48:00:00
-#SBATCH --mem=64gb
 #SBATCH --gres=gpu:4
 
 # set up enviroment for cuda
