@@ -1,15 +1,17 @@
 #!/bin/bash
-#SBATCH --ntasks=256
+#SBATCH --mem=20gb
+#SBATCH --partition=afkm
+#SBATCH --ntasks=64
 #SBATCH --gres=gpu:2
 
-export PYTHONPATH="./GLMToGCompare2/"
+export PYTHONPATH="home/students/schwenke/GLMToGCompare2/"
 export TOKENIZERS_PARALLELISM=true
 
 # Default values
 ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
 GENERATOR_MODELCARD="google/flan-t5-large"
-TRAIN_FILE="./data/preprocessed/trex-train-kilt.jsonl"
-SAVE_LOCATION="./saved_models/trex/flan-t5-large"
+TRAIN_FILE="home/students/schwenke/data/preprocessed/trex-train-kilt.jsonl"
+SAVE_LOCATION="home/students/schwenke/saved_models/trex/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
 BATCH_SIZE=128
@@ -18,7 +20,7 @@ LEARNING_RATE="1e-4"
 NUM_EPOCHS=5
 EARLY_STOPPING=2
 NEIGHBORHOOD_SIZE=10
-EVAL_FILE="./data/preprocessed/trex-dev-kilt.jsonl"
+EVAL_FILE="home/students/schwenke/data/preprocessed/trex-dev-kilt.jsonl"
 CHECKPOINTING_INTERVAL=500
 
 # Parse arguments
@@ -88,8 +90,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Path to the Python program
-source ./.venv/bin/activate
-PYTHON_PROGRAM="./GraphLanguageModel/train_glm.py"
+source home/students/schwenke/.venv/bin/activate
+PYTHON_PROGRAM="home/students/schwenke/GraphLanguageModel/train_glm.py"
 
 # Start the Python program with inputs
 echo starting python3 "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
