@@ -3,6 +3,8 @@
 #SBATCH --partition=afkm
 #SBATCH --ntasks=64
 #SBATCH --gres=gpu:2
+#SBATCH --output=output_%j.txt
+#SBATCH -e error_%j.txt
 
 srun conda deactivate
 srun conda activate 3.9
