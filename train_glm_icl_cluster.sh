@@ -1,4 +1,5 @@
 #!/bin/bash
+#SBATCH --job-name=glm-train
 #SBATCH --mem=20gb
 #SBATCH --partition=afkm
 #SBATCH --ntasks=24
