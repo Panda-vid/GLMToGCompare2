@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --mem=20gb
 #SBATCH --partition=afkm
-#SBATCH --ntasks=64
+#SBATCH --ntasks=24
 #SBATCH --gres=gpu:2
 #SBATCH --output=output_%j.txt
 #SBATCH -e error_%j.txt
