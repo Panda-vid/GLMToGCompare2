@@ -6,7 +6,7 @@
 #SBATCH --output=output_%j.txt
 #SBATCH -e error_%j.txt
 
-srun echo prepare python environment
+echo prepare python environment
 srun conda deactivate
 srun conda activate 3.9
 srun export PYTHONPATH="home/students/schwenke/GLMToGCompare2/"
@@ -100,7 +100,7 @@ done
 PYTHON_PROGRAM="home/students/schwenke/GLMToGCompare2/GraphLanguageModel/train_glm.py"
 
 # Start the Python program with inputs
-srun echo accelerate launch "--mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=cudagraphs" "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+echo accelerate launch "--mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=cudagraphs" "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
 srun accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=cudagraphs  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
