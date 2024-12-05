@@ -2,3 +2,4 @@ data/
 test_data/
 __pycache__/
 saved_models/
+.venv
