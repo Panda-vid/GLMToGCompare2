@@ -1,4 +1,6 @@
 #!/bin/bash
+#SBATCH --mail-user=ra443@stud.uni-heidelberg.de
+#SBATCH --mail-type=ALL
 #SBATCH --job-name=glm-train
 #SBATCH --mem=20gb
 #SBATCH --partition=afkm
@@ -7,19 +9,21 @@
 #SBATCH --output=output_%j.txt
 #SBATCH -e error_%j.txt
 
+PROJECT_PATH=home/students/schwenke/GLMToGCompare2/
+
 echo prepare python environment
 srun conda deactivate
 srun conda activate 3.9
-srun export PYTHONPATH="home/students/schwenke/GLMToGCompare2/"
+srun -D $PROJECT_PATH export PYTHONPATH="."
 srun export TOKENIZERS_PARALLELISM=true
-srun source home/students/schwenke/GLMToGCompare2/.venv/bin/activate
+srun -d $PROJECT_PATH source .venv/bin/activate
 
 
 # Default values
 ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
 GENERATOR_MODELCARD="google/flan-t5-large"
-TRAIN_FILE="home/students/schwenke/GLMToGCompare2/data/preprocessed/trex-train-kilt.jsonl"
-SAVE_LOCATION="home/students/schwenke/GLMToGCompare2/saved_models/trex/flan-t5-large"
+TRAIN_FILE="data/preprocessed/trex-train-kilt.jsonl"
+SAVE_LOCATION="saved_models/trex/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
 BATCH_SIZE=8
@@ -28,7 +32,7 @@ LEARNING_RATE="1e-4"
 NUM_EPOCHS=5
 EARLY_STOPPING=2
 NEIGHBORHOOD_SIZE=10
-EVAL_FILE="home/students/schwenke/GLMToGCompare2/data/preprocessed/trex-dev-kilt.jsonl"
+EVAL_FILE="data/preprocessed/trex-dev-kilt.jsonl"
 CHECKPOINTING_INTERVAL=500
 
 # Parse arguments
@@ -104,6 +108,6 @@ PYTHON_PROGRAM="home/students/schwenke/GLMToGCompare2/GraphLanguageModel/train_g
 echo accelerate launch "--mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=cudagraphs" "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
-srun accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=cudagraphs  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+srun -D $PROJECT_PATH accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=cudagraphs  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
