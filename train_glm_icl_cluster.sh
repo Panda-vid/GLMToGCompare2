@@ -11,12 +11,12 @@
 
 PROJECT_PATH=home/students/schwenke/GLMToGCompare2/
 
-echo prepare python environment
+'echo prepare python environment
 srun -D $PROJECT_PATH conda deactivate
 srun -D $PROJECT_PATH conda activate 3.9
 srun -D $PROJECT_PATH export PYTHONPATH="."
 srun export TOKENIZERS_PARALLELISM=true
-srun -d $PROJECT_PATH source .venv/bin/activate
+srun -d $PROJECT_PATH source .venv/bin/activate'
 
 
 # Default values
