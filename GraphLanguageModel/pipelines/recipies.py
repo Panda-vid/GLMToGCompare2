@@ -38,6 +38,7 @@ class ModelRecipe:
         tokenizer = self._load_tokenizer()
         encoder = self._load_encoder()
         generator = self._load_generator()
+        generator.shared = encoder.shared
         return tokenizer, encoder, generator
 
     def _load_encoder(self):
