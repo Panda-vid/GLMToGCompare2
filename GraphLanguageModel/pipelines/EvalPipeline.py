@@ -40,7 +40,7 @@ class EvalPipeline:
         scores = []
         unwrapped_generator = self.accelerator.unwrap_model(self.generator)
         with tqdm(self.dataloader, postfix=f"Evaluating on {self.data_name}", total=len(self.dataloader), disable=(not self.accelerator.is_local_main_process)) as pbar:
-            for inputs, labels in pbar:
+            for (inputs, _), labels in pbar:
                 with torch.no_grad():
                     outputs = unwrapped_generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)[:, :labels.shape[1]]
                     predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)

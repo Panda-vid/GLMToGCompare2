@@ -69,12 +69,12 @@ class TrainPipeline:
         self.batches_since_report = 0
         batch_progress = int(self.progress[1]/self.batch_size)
         index = 0
-        with tqdm(enumerate(self.dataloader, start=batch_progress), postfix=f"Training {self.data_name}", 
-                            total=len(self.dataloader) - batch_progress, disable=(not self.accelerator.is_local_main_process)) as pbar:
-            for i, (inputs, labels) in pbar:
+        with tqdm(self.dataloader, start=batch_progress, postfix=f"Training {self.data_name}", 
+                    total=len(self.dataloader) - batch_progress, disable=(not self.accelerator.is_local_main_process)) as pbar:
+            for (inputs, attention_mask), labels in pbar:
                 self.optimizer.zero_grad()
                 encoder_outputs = self.encoder(**inputs)
-                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels).loss
+                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask).loss
                 batch_losses = self.accelerator.gather(batch_loss)
                 self.accelerator.backward(batch_loss)
                 self.optimizer.step()
