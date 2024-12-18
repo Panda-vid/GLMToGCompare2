@@ -13,7 +13,7 @@ PROJECT_PATH=home/students/schwenke/GLMToGCompare2/
 
 echo prepare python environment
 conda activate 3.9
-export PYTHONPATH="."
+export PYTHONPATH="home/students/schwenke/GLMToGCompare2/"
 export TOKENIZERS_PARALLELISM=true
 source .venv/bin/activate
 
@@ -101,7 +101,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Path to the Python program
-PYTHON_PROGRAM="home/students/schwenke/GLMToGCompare2/GraphLanguageModel/train_glm.py"
+PYTHON_PROGRAM="GraphLanguageModel/train_glm.py"
 
 # Start the Python program with inputs
 echo accelerate launch "--mixed_precision=bf16 --multi_gpu --num_processes=4 --dynamo_backend=cudagraphs" "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
