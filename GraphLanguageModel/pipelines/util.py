@@ -17,6 +17,9 @@ def create_multiprocessed_accuracy(poolsize: int):
         return s/total
     return accuracy
 
+def single_process_accuracy(predictions: List[str], labels: List[str]):
+    return sum([pred == label for (pred, label) in zip(predictions, labels)])
+
 
 def cross_entropy_manual(pred, groundtruth, ignore_index):
     target = groundtruth[groundtruth!= ignore_index]

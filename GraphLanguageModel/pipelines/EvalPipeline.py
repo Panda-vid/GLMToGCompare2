@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from GraphLanguageModel.pipelines.data_handling import GraphDataset, create_collate_fn
 from GraphLanguageModel.pipelines.recipies import ModelRecipe
-from GraphLanguageModel.pipelines.util import create_multiprocessed_accuracy
+from GraphLanguageModel.pipelines.util import create_multiprocessed_accuracy, single_process_accuracy
 
 
 class EvalPipeline:
@@ -68,7 +68,7 @@ class Builder:
         self.batch_size = 4
         self.model_recipe = None
         self.repetitions = 1
-        self.score_func = create_multiprocessed_accuracy(16)
+        self.score_func = single_process_accuracy
 
         self.reporting_interval = 5
         self.checkpointing_interval = 5
