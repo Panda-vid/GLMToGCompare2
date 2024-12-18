@@ -171,7 +171,7 @@ class Builder:
         if not self._buildable():
             raise ValueError(self._generate_error_msg())
         tokenizer, encoder, generator = self.model_recipe.build()
-        optimizer = self.train_recipe.build(list(encoder.parameters()) + list(generator.parameters()))
+        optimizer = self.train_recipe.build(set(list(encoder.parameters()) + list(generator.parameters())))
         train_dataloader, eval_dataloader = self._prepare_dataloaders(encoder.data_processor, tokenizer)
 
         accelerator = Accelerator()
