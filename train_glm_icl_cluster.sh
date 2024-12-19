@@ -101,9 +101,9 @@ done
 PYTHON_PROGRAM="/home/students/schwenke/GLMToGCompare2/GraphLanguageModel/train_glm.py"
 
 # Start the Python program with inputs
-echo accelerate launch "--mixed_precision=bf16 --multi_gpu --num_processes=2 --num_machines=1 --rdzv-backend=c10d --main_process_port=0" "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+echo accelerate launch "--mixed_precision=bf16 --multi_gpu --num_processes=2 --num_machines=1" "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
-srun accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=2 --num_machines=1 --rdzv-backend=c10d --main_process_port=0 "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+srun accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=2 --num_machines=1 "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
