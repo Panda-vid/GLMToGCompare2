@@ -14,12 +14,16 @@ export PYTHONPATH="/home/students/schwenke/GLMToGCompare2/"
 export TOKENIZERS_PARALLELISM=true
 source /home/students/schwenke/GLMToGCompare2/.venv/bin/activate
 
+SCRATCH_PATH=/scratch/schwenke
+
+srun cp -r /home/students/schwenke/GLMToGCompare2/data $SCRATCH_PATH
+
 
 # Default values
 ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
 GENERATOR_MODELCARD="google/flan-t5-large"
-TRAIN_FILE="/home/students/schwenke/GLMToGCompare2/data/preprocessed/trex-train-kilt.jsonl"
-SAVE_LOCATION="/home/students/schwenke/GLMToGCompare2/saved_models/trex/flan-t5-large"
+TRAIN_FILE="$SCRATCH_PATH/data/preprocessed/trex-train-kilt.jsonl"
+SAVE_LOCATION="$SCRATCH_PATH/saved_models/trex/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
 BATCH_SIZE=8
@@ -28,7 +32,7 @@ LEARNING_RATE="1e-4"
 NUM_EPOCHS=5
 EARLY_STOPPING=2
 NEIGHBORHOOD_SIZE=10
-EVAL_FILE="/home/students/schwenke/GLMToGCompare2/data/preprocessed/trex-dev-kilt.jsonl"
+EVAL_FILE="$SCRATCH_PATH/data/preprocessed/trex-dev-kilt.jsonl"
 CHECKPOINTING_INTERVAL=500
 
 # Parse arguments
