@@ -15,9 +15,10 @@ export TOKENIZERS_PARALLELISM=true
 source /home/students/schwenke/GLMToGCompare2/.venv/bin/activate
 
 SCRATCH_PATH=/scratch/schwenke
-
 srun cp -r /home/students/schwenke/GLMToGCompare2/data $SCRATCH_PATH
 
+TRITON_CACHE_DIR=$SCRATCH_PATH
+srun export TRITON_CACHE_DIR=$TRITON_CACHE_DIR
 
 # Default values
 ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
