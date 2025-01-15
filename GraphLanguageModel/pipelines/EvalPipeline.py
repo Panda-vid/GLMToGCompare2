@@ -46,9 +46,7 @@ class EvalPipeline:
                     outputs = unwrapped_generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)[:, :labels.shape[1]]
                     predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
                     labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-                eval_time = time.time()
                 batch_score = torch.Tensor(self.score_func(predictions, labels)).cuda(device=self.accelerator.device)
-                print(f"Evaluation time spent {eval_time - time.time()}")
                 batch_scores = self.accelerator.gather(batch_score)
 
                 if self.accelerator.is_local_main_process:
