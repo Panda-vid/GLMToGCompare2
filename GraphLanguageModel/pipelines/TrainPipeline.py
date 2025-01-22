@@ -2,9 +2,10 @@ import torch
 
 from pathlib import Path
 
-from torch.utils.data import DataLoader
 from tqdm import tqdm
-from accelerate import Accelerator
+
+from torch.utils.data import DataLoader
+from torch.cuda.amp import autocast
 
 from GraphLanguageModel.pipelines.EvalPipeline import EvalPipeline
 from GraphLanguageModel.pipelines.data_handling import GraphDataset, create_collate_fn
@@ -13,12 +14,11 @@ from GraphLanguageModel.pipelines.util import create_multiprocessed_accuracy, si
 
 
 class TrainPipeline:
-    def __init__(self, accelerator:Accelerator, dataloader: DataLoader, num_epochs: int, 
+    def __init__(self, dataloader: DataLoader, num_epochs: int, 
                  batch_size: int, early_stopping: int, optimizer,
                  tokenizer, encoder, generator, checkpointing_interval: int, 
                  save_location: Path, eval_pipeline: EvalPipeline = None, data_name: str = "") -> None:
 
-        self.accelerator = accelerator
         self.dataloader = dataloader
         self.num_epochs = num_epochs
         self.batch_size = batch_size
@@ -52,8 +52,7 @@ class TrainPipeline:
     def train(self):
         if self.eval_pipeline is not None:
             self.last_accuracy, _ = self.eval_run()
-            if self.accelerator.is_local_main_process:
-                print(f"Score before training: {self.last_accuracy}")
+            print(f"Score before training: {self.last_accuracy}")
         for epoch in range(self.num_epochs):
             if epoch > self.progress[0]:
                 self.encoder.train()
@@ -69,23 +68,19 @@ class TrainPipeline:
         self.batches_since_report = 0
         batch_progress = int(self.progress[1]/self.batch_size)
         index = 0
-        with tqdm(self.dataloader, start=batch_progress, postfix=f"Training {self.data_name}", 
-                    total=len(self.dataloader) - batch_progress, disable=(not self.accelerator.is_local_main_process)) as pbar:
+        with tqdm(self.dataloader, postfix=f"Training {self.data_name}", 
+                    total=len(self.dataloader) - batch_progress) as pbar:
             for (inputs, attention_mask), labels in pbar:
-                self.optimizer.zero_grad()
-                encoder_outputs = self.encoder(**inputs)
-                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask).loss
-                batch_losses = self.accelerator.gather(batch_loss)
-                self.accelerator.backward(batch_loss)
-                self.optimizer.step()
-                del batch_loss
-                
-                self.progress[1] += self.batch_size
-                index += 1
-                if self.accelerator.is_local_main_process:
-                    parallel_batch_loss = batch_losses.mean()
-                    self.running_loss += parallel_batch_loss
-                    pbar.set_description_str(f"Average loss last {len(batch_losses)} batches: {parallel_batch_loss}")
+                with autocast(True, dtype=torch.bfloat16):
+                    self.optimizer.zero_grad()
+                    encoder_outputs = self.encoder(**inputs)
+                    batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask).loss
+                    batch_loss.backward()
+                    self.optimizer.step()
+                    self.progress[1] += self.batch_size
+                    index += 1
+                    self.running_loss += batch_loss
+                    pbar.set_description_str(f"Average loss last batch: {batch_loss}")
                     self._save_if_necessary(index)
                   
     def eval_run(self):
@@ -94,8 +89,7 @@ class TrainPipeline:
     def _increment_early_stopping(self):
         if self.eval_pipeline is not None:
             avg_score, _ = self.eval_run()
-            if self.accelerator.is_local_main_process:
-                print(f"Score after last epoch: {avg_score}")
+            print(f"Score after last epoch: {avg_score}")
             if self.last_accuracy > avg_score:
                 self.abort += 1
             else:
@@ -125,12 +119,9 @@ class TrainPipeline:
         self._save_progress()
     
     def _save_model(self):
-        self.accelerator.wait_for_everyone()
         self.save_location.mkdir(exist_ok=True, parents=True)
-        unwrapped_encoder = self.accelerator.unwrap_model(self.encoder)
-        unwrapped_generator = self.accelerator.unwrap_model(self.generator)
-        unwrapped_encoder.save_pretrained(self.encoder_save_location, from_pt=True)
-        unwrapped_generator.save_pretrained(self.generator_save_location, from_pt=True)
+        self.encoder.save_pretrained(self.encoder_save_location, from_pt=True)
+        self.generator.save_pretrained(self.generator_save_location, from_pt=True)
         self.tokenizer.save_pretrained(self.encoder_save_location, from_pt=True)
 
     @property
@@ -172,46 +163,31 @@ class Builder:
             raise ValueError(self._generate_error_msg())
         tokenizer, encoder, generator = self.model_recipe.build()
         optimizer = self.train_recipe.build(set(list(encoder.parameters()) + list(generator.parameters())))
-        train_dataloader, eval_dataloader = self._prepare_dataloaders(encoder.data_processor, tokenizer)
-
-        accelerator = Accelerator()
-        encoder, generator, train_dataloader, optimizer = accelerator.prepare(encoder, generator, train_dataloader, optimizer)
-        if self.eval_data is not None:
-            eval_dataloader = accelerator.prepare(eval_dataloader)
-            eval_pipeline = self._create_eval_pipeline(accelerator, eval_dataloader, tokenizer, encoder, generator)
-            return TrainPipeline(accelerator, train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
-                                optimizer, tokenizer, encoder, generator, self.checkpointing_interval,
-                                save_location=self.save_location, eval_pipeline=eval_pipeline, 
-                                data_name=self.train_recipe.train_data.name)
-        else:
-            return TrainPipeline(accelerator, train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
-                                optimizer, tokenizer, encoder, generator, self.checkpointing_interval,
-                                save_location=self.save_location, data_name=self.train_recipe.train_data.name)
+        train_dataloader = DataLoader(self._create_dataset(encoder.data_processor, tokenizer), batch_size=self.train_recipe.batch_size,
+                                collate_fn=create_collate_fn(torch.get_default_device(), encoder.data_processor, tokenizer, self.model_recipe.max_generation_len),
+                                generator=torch.Generator(device=torch.get_default_device()),
+                                shuffle=True)
+        eval_pipeline = self._create_eval_pipeline(tokenizer, encoder, generator)
+        return TrainPipeline(train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
+                            optimizer, tokenizer, encoder, generator, self.checkpointing_interval,
+                            save_location=self.save_location, eval_pipeline=eval_pipeline, 
+                            data_name=self.train_recipe.train_data.name)
     
     def _buildable(self) -> bool:
         return self.train_recipe is not None or self.model_recipe is not None or self.save_location is not None
-    
-    def _prepare_dataloaders(self, data_processor, tokenizer):
-        train_dataloader = DataLoader(self._create_dataset(data_processor, tokenizer), batch_size=self.train_recipe.batch_size,
-                                collate_fn=create_collate_fn("cpu", data_processor, tokenizer, self.model_recipe.max_generation_len),
-                                shuffle=True)
-        eval_dataloader = None
-        if self.eval_data is not None:
-            eval_dataset = GraphDataset(self.eval_data, data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.train_recipe.is_classification)
-            eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size*2,
-                                    collate_fn=create_collate_fn("cpu", data_processor, tokenizer, self.model_recipe.max_generation_len))
-        return train_dataloader, eval_dataloader
     
     def _create_dataset(self, data_processor, tokenizer):
         return GraphDataset(self.train_recipe.train_data, data_processor, tokenizer, self.model_recipe.graph_encoder_strategy,
                             self.train_recipe.is_classification, neighborhood_size=self.train_recipe.neighborhood_size)
     
-    def _create_eval_pipeline(self, accelerator, dataloader, tokenizer, encoder, generator):
-        eval_pipeline = None
+    def _create_eval_pipeline(self, tokenizer, encoder, generator):
         if self.eval_data is not None:
-            eval_pipeline = EvalPipeline(accelerator, dataloader, single_process_accuracy, 1, tokenizer, encoder, generator,
-                                         self.model_recipe.max_generation_len, data_name=self.eval_data.name)
-        return eval_pipeline
+            eval_dataset = GraphDataset(self.eval_data, encoder.data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.train_recipe.is_classification)
+            eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size*2,
+                                    collate_fn=create_collate_fn(torch.get_default_device(), encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
+            return EvalPipeline(eval_dataloader, single_process_accuracy, 1, tokenizer, encoder, generator, self.model_recipe.max_generation_len, data_name=self.eval_data.name)
+        else:
+            return None
     
     def _generate_error_msg(self) -> str:
         msg = ""

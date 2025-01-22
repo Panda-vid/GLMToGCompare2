@@ -2,14 +2,15 @@ export PYTHONPATH=.
 export TOKENIZERS_PARALLELISM=true
 
 # Default values
-ENCODER_MODELCARD="plenz/GLM-flan-t5-large"
+ENCODER_MODELCARD="../GLM-flan-t5-large"
 GENERATOR_MODELCARD="google/flan-t5-large"
 TRAIN_FILE="./data/preprocessed/trex-train-kilt.jsonl"
 SAVE_LOCATION="./saved_models/trex/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
-BATCH_SIZE=4
+BATCH_SIZE=256
 OPTIMIZER="AdamW"
+DEVICE="cuda"
 LEARNING_RATE="1e-4"
 NUM_EPOCHS=5
 EARLY_STOPPING=2
@@ -89,9 +90,9 @@ source ./.venv/bin/activate
 PYTHON_PROGRAM=./GraphLanguageModel/train_glm.py
 
 # Start the Python program with inputs
-echo accelerate launch "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+echo python "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
-accelerate launch --mixed_precision=bf16 --dynamo_backend=cudagraphs --num_machines 1  "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+python "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"

@@ -1,13 +1,13 @@
-import time
 import torch
 import numpy as np
 
 from pathlib import Path
 from typing import Callable
 
-from accelerate import Accelerator
 from tqdm import tqdm
+
 from torch.utils.data import DataLoader
+from torch.cuda.amp import autocast
 
 from GraphLanguageModel.pipelines.data_handling import GraphDataset, create_collate_fn
 from GraphLanguageModel.pipelines.recipies import ModelRecipe
@@ -15,9 +15,8 @@ from GraphLanguageModel.pipelines.util import create_multiprocessed_accuracy, si
 
 
 class EvalPipeline:
-    def __init__(self, accelerator: Accelerator, dataloader: DataLoader, score_func: Callable[[torch.Tensor, torch.Tensor], float], repetitions: int, 
+    def __init__(self, dataloader: DataLoader, score_func: Callable[[torch.Tensor, torch.Tensor], float], repetitions: int, 
                  tokenizer, encoder, generator, max_generation_len: int, data_name: str = "") -> None:
-        self.accelerator = accelerator
         self.dataloader = dataloader
         self.data_name = data_name
         self.score_func = score_func
@@ -32,29 +31,27 @@ class EvalPipeline:
         self.encoder.eval()
         self.generator.eval()
         scores = []
-        for i in range(self.repetitions):
-            scores.append(self.eval_round())
+        with autocast(True, dtype=torch.bfloat16):
+            for i in range(self.repetitions):
+                score = self.eval_round()
+                scores.append(score.cpu())
         scores = np.array(scores)
         return scores.mean(), scores.std()
 
     def eval_round(self):
         scores = []
-        unwrapped_generator = self.accelerator.unwrap_model(self.generator)
-        with tqdm(self.dataloader, postfix=f"Evaluating on {self.data_name}", total=len(self.dataloader), disable=(not self.accelerator.is_local_main_process)) as pbar:
+        with tqdm(self.dataloader, postfix=f"Evaluating on {self.data_name}", total=len(self.dataloader)) as pbar:
             for (inputs, _), labels in pbar:
-                with torch.no_grad():
-                    outputs = unwrapped_generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)[:, :labels.shape[1]]
-                    predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-                    labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-                batch_score = torch.Tensor(self.score_func(predictions, labels)).cuda(device=self.accelerator.device)
-                batch_scores = self.accelerator.gather(batch_score)
+                    with torch.no_grad():
+                        outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)[:, :labels.shape[1]]
+                        predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+                        labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+                        batch_score = torch.tensor(self.score_func(predictions, labels)).cuda()
+                        scores.append(batch_score)
+                        pbar.set_description_str(f"Score last batch: {batch_score}")
 
-                if self.accelerator.is_local_main_process:
-                    parallel_batch_score = batch_scores.mean()
-                    scores.append(parallel_batch_score)
-                    pbar.set_description_str(f"Score last {len(batch_scores)} batches: {parallel_batch_score}")
-
-        return torch.tensor(scores).mean()
+        all_scores = torch.tensor(scores, dtype=torch.float)
+        return all_scores.mean()
 
     @property
     def data_processor(self):
@@ -106,7 +103,7 @@ class Builder:
             raise ValueError(self._generate_error_msg())
         tokenizer, encoder, generator = self.model_recipe.build()
         dataloader = DataLoader(self._create_dataset(), batch_size=self.batch_size, 
-                                collate_fn=create_collate_fn(encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
+                                collate_fn=create_collate_fn(torch.get_default_device(), encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
         return EvalPipeline(dataloader, self.score_func, self.repetitions, tokenizer, encoder, generator, self.model_recipe.max_generation_len, data_name=self.eval_data.name)
 
     def _buildable(self) -> bool:

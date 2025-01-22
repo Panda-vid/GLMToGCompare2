@@ -7,7 +7,7 @@ torch-geometric
 torchaudio
 torchvision
 tqdm
-transformers
+transformers==4.29.1
 accelerate
 qwikidata
 requests

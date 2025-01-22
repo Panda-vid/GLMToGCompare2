@@ -28,22 +28,27 @@ class TrainRecipe:
 
 
 class ModelRecipe:
-    def __init__(self, encoder_modelcard: str, graph_encoder_strategy: str , generator_modelcard: str = None, max_generation_len: int = 512):
+    def __init__(self, encoder_modelcard: str, graph_encoder_strategy: str , 
+                 generator_modelcard: str = None, max_generation_len: int = 512, 
+                 gradient_checkpointing: bool = True):
         self.encoder = encoder_modelcard
         self.generator = generator_modelcard
         self.graph_encoder_strategy = graph_encoder_strategy
         self.max_generation_len = max_generation_len
+        self.gradient_checkpointing = gradient_checkpointing
 
     def build(self):
         tokenizer = self._load_tokenizer()
         encoder = self._load_encoder()
         generator = self._load_generator()
-        generator.shared = encoder.shared
+        encoder.shared = generator.shared
         return tokenizer, encoder, generator
 
     def _load_encoder(self):
         print(f"Load encoder from {self.encoder}")
         model = AutoModel.from_pretrained(self.encoder, trust_remote_code=True, revision='main')
+        if self.gradient_checkpointing:
+            model.gradient_checkpointing_enable()
         return model
 
     def _load_generator(self):
@@ -51,6 +56,8 @@ class ModelRecipe:
         if self.generator is not None:
             print(f"Load generator from {self.generator}")
             model_generation = T5ForConditionalGeneration.from_pretrained(self.generator, trust_remote_code=True)
+            if self.gradient_checkpointing:
+                model_generation.gradient_checkpointing_enable()
             del model_generation.encoder  # we only need the decoder for generation. Deleting the encoder is optional, but saves memory.
         return model_generation
     

@@ -1,5 +1,7 @@
 import argparse
 
+import torch
+
 from utils.argparse import KeywordAction, PathAction, problem_type_to_classification_bool
 from GraphLanguageModel.pipelines import TrainPipeline
 from GraphLanguageModel.pipelines.recipies import ModelRecipe, TrainRecipe
@@ -21,6 +23,7 @@ parser.add_argument("save_location",
 parser.add_argument("-pt", "--problem_type", choices=["classification", "generation"], default="classification", type=str)
 parser.add_argument("-gt", "--glm_type", help="Select whether to use a global or local GLM.", choices=["local", "global"], default="global", type=str)
 parser.add_argument("-b", "--batch_size", default=64, type=int)
+parser.add_argument("-d", "--device", default='cpu', type=str)
 optimizer_group = parser.add_argument_group("Optimizer")
 optimizer_group.add_argument("-o", "--optimizer", 
                                 choices=["Adadelta", "Adafactor", "Adagrad", "Adam", "AdamW", "SparseAdam",
@@ -47,14 +50,18 @@ parser.add_argument("-ef", "--eval_file",
 parser.add_argument("-c", "--checkpointing_interval", 
                     help="Determines after how many batches the script should save a model checkpoint, if appropriate.",
                     default=2000, type=int)
+parser.add_argument("--gradient_checkpointing",
+                    help="Enables/Disables gradient chckpointing which reduces memory usage by computing gradients on demand. Gradient checkpointing decreases training speed by approx. 20 percent.",
+                    action=argparse.BooleanOptionalAction, default=True)
 args = parser.parse_args()
 
 
 if __name__ == "__main__":
+    torch.set_default_device(args.device)
     train_recipe = TrainRecipe(problem_type_to_classification_bool(args.problem_type), args.train_file, args.num_epochs, 
                                args.batch_size, args.early_stopping, args.optimizer, args.optimizer_kwargs, 
                                args.learning_rate, args.neighborhood_size)
-    model_recipe = ModelRecipe(args.encoder_modelcard, args.glm_type, args.generator_modelcard)
+    model_recipe = ModelRecipe(args.encoder_modelcard, args.glm_type, args.generator_modelcard, args.gradient_checkpointing)
     train_pipeline_builder = TrainPipeline.Builder().add_model_recipe(model_recipe).add_train_recipe(train_recipe).add_save_location(args.save_location).set_checkpointing_interval(args.checkpointing_interval)
     if args.eval_file is not None:
         train_pipeline_builder = train_pipeline_builder.set_eval_data(args.eval_file)

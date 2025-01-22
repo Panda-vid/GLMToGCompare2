@@ -27,7 +27,7 @@ TRAIN_FILE="$SCRATCH_PATH/data/preprocessed/trex-train-kilt.jsonl"
 SAVE_LOCATION="$SCRATCH_PATH/saved_models/trex/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
-BATCH_SIZE=8
+BATCH_SIZE=64
 OPTIMIZER="AdamW"
 LEARNING_RATE="1e-4"
 NUM_EPOCHS=5
@@ -106,9 +106,9 @@ done
 PYTHON_PROGRAM="/home/students/schwenke/GLMToGCompare2/GraphLanguageModel/train_glm.py"
 
 # Start the Python program with inputs
-echo accelerate launch "--mixed_precision=bf16 --multi_gpu --num_processes=2 --num_machines=1 --dynamo_backend=no" "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+echo "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
-srun accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=2 --num_machines=1 --dynamo_backend=no "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+srun "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
         -gt "$GLM_TYPE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
         -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
