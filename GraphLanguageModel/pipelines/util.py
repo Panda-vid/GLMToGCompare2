@@ -1,6 +1,9 @@
 from multiprocessing import Pool
 from typing import List, Tuple
+
 import torch
+import numpy as np
+
 from torch.nn import functional as f
 
 def token_accuracy(predictions: torch.Tensor, labels: torch.Tensor) -> float:
@@ -18,7 +21,7 @@ def create_multiprocessed_accuracy(poolsize: int):
     return accuracy
 
 def single_process_accuracy(predictions: List[str], labels: List[str]):
-    return sum([pred == label for (pred, label) in zip(predictions, labels)])
+    return np.array([pred == label for (pred, label) in zip(predictions, labels)]).mean()
 
 
 def cross_entropy_manual(pred, groundtruth, ignore_index):
