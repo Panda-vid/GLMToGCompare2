@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Dict
+import torch
 from transformers import AutoTokenizer, AutoModel, T5ForConditionalGeneration
 
 from utils.oop import str_to_optimizer
@@ -41,7 +42,7 @@ class ModelRecipe:
         tokenizer = self._load_tokenizer()
         encoder = self._load_encoder()
         generator = self._load_generator()
-        encoder.shared = generator.shared
+        generator.shared = encoder.shared
         return tokenizer, encoder, generator
 
     def _load_encoder(self):
@@ -49,7 +50,7 @@ class ModelRecipe:
         model = AutoModel.from_pretrained(self.encoder, trust_remote_code=True, revision='main')
         if self.gradient_checkpointing:
             model.gradient_checkpointing_enable()
-        return model
+        return model.to(torch.get_default_device())
 
     def _load_generator(self):
         model_generation = None
@@ -59,7 +60,7 @@ class ModelRecipe:
             if self.gradient_checkpointing:
                 model_generation.gradient_checkpointing_enable()
             del model_generation.encoder  # we only need the decoder for generation. Deleting the encoder is optional, but saves memory.
-        return model_generation
+        return model_generation.to(torch.get_default_device())
     
     def _load_tokenizer(self):
         print(f"Load tokenizer from {self.encoder}")

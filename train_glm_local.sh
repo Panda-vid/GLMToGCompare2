@@ -4,18 +4,18 @@ export TOKENIZERS_PARALLELISM=true
 # Default values
 ENCODER_MODELCARD="../GLM-flan-t5-large"
 GENERATOR_MODELCARD="google/flan-t5-large"
-TRAIN_FILE="./data/preprocessed/trex-train-kilt.jsonl"
-SAVE_LOCATION="./saved_models/trex/flan-t5-large"
+TRAIN_FILE="./data/preprocessed/structured_zeroshot-train-kilt.jsonl"
+SAVE_LOCATION="./saved_models/structured_zeroshot/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
-BATCH_SIZE=256
+BATCH_SIZE=16
 OPTIMIZER="AdamW"
 DEVICE="cuda"
 LEARNING_RATE="1e-4"
 NUM_EPOCHS=5
 EARLY_STOPPING=2
 NEIGHBORHOOD_SIZE=10
-EVAL_FILE="./data/preprocessed/trex-dev-kilt.jsonl"
+EVAL_FILE="./data/preprocessed/structured_zeroshot-dev-kilt.jsonl"
 CHECKPOINTING_INTERVAL=500
 
 # Parse arguments

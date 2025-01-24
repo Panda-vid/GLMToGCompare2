@@ -42,13 +42,14 @@ class EvalPipeline:
         scores = []
         with tqdm(self.dataloader, postfix=f"Evaluating on {self.data_name}", total=len(self.dataloader)) as pbar:
             for (inputs, _), labels in pbar:
-                    with torch.no_grad():
-                        outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)[:, :labels.shape[1]]
-                        predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-                        labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-                        batch_score = torch.tensor(self.score_func(predictions, labels)).cuda()
-                        scores.append(batch_score)
-                        pbar.set_description_str(f"Score last batch: {batch_score}")
+                with torch.no_grad():
+                    outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)
+                    predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+                    labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+                    print(list(zip(predictions, labels)))
+                    batch_score = torch.tensor(self.score_func(predictions, labels)).cuda()
+                    scores.append(batch_score)
+                    pbar.set_description_str(f"Score last batch: {batch_score}")
 
         all_scores = torch.tensor(scores, dtype=torch.float)
         return all_scores.mean()
