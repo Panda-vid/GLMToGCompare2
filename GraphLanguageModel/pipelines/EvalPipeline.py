@@ -40,7 +40,7 @@ class EvalPipeline:
         with self.eval_data.open("r") as data_file:
             batch = []
             labels = []
-            for i, instance in enumerate(data_file):
+            for i, instance in tqdm(enumerate(data_file)):
                 inp, label = self._convert_data_instance(json.loads(instance))
                 batch.append(inp)
                 labels.append(label)
