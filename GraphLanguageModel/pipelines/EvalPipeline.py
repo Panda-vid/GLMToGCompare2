@@ -102,7 +102,7 @@ class Builder:
         if not self._buildable():
             raise ValueError(self._generate_error_msg())
         tokenizer, encoder, generator = self.model_recipe.build()
-        dataloader = DataLoader(self._create_dataset(), batch_size=self.batch_size, 
+        dataloader = DataLoader(self._create_dataset(encoder.data_processor, tokenizer), batch_size=self.batch_size, 
                                 collate_fn=create_collate_fn(torch.get_default_device(), encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
         return EvalPipeline(dataloader, self.score_func, self.repetitions, tokenizer, encoder, generator, self.model_recipe.max_generation_len, data_name=self.eval_data.name)
 

@@ -8,13 +8,13 @@ from GraphLanguageModel.pipelines.recipies import ModelRecipe
 parser = argparse.ArgumentParser(prog="eval_glm", usage="%(prog)s [options]")
 parser.add_argument("encoder_modelcard", 
                     help="The (huggingface modelhub) location of the encoder model.", 
-                    type=str, required=True)
+                    type=str)
 parser.add_argument("generator_modelcard", 
                     help="The (huggingface modelhub) location of the generator model.", 
-                    type=str, required=True)
+                    type=str)
 parser.add_argument("eval_file", 
                     help="Location of the preprocessed evaluation file.", 
-                    type=str, required=True, action=PathAction)
+                    type=str, action=PathAction)
 parser.add_argument("-pt", "--problem_type", choices=["classification", "generation"], default="classification", type=str)
 parser.add_argument("-gt", "--glm_type", help="Select whether to use a global or local GLM.", choices=["local", "global"], default="global", type=str)
 parser.add_argument("-b", "--batch_size", default=64, type=int)
