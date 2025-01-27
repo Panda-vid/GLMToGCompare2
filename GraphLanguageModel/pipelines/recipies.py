@@ -29,7 +29,7 @@ class TrainRecipe:
 
 class ModelRecipe:
     def __init__(self, encoder_modelcard: str, graph_encoder_strategy: str , 
-                 generator_modelcard: str = None, max_generation_len: int = 512, 
+                 generator_modelcard: str = None, max_generation_len: int = 30, 
                  gradient_checkpointing: bool = True):
         self.encoder = encoder_modelcard
         self.generator = generator_modelcard
