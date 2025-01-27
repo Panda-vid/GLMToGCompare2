@@ -47,22 +47,22 @@ class ModelRecipe:
 
     def _load_encoder(self):
         print(f"Load encoder from {self.encoder}")
-        model = AutoModel.from_pretrained(self.encoder, trust_remote_code=True, revision='main')
+        model = AutoModel.from_pretrained(self.encoder, trust_remote_code=True, device_map="auto", torch_dtype="auto", revision='main')
         if self.gradient_checkpointing:
             model.gradient_checkpointing_enable()
-        return model.to(torch.get_default_device())
+        return model
 
     def _load_generator(self):
         model_generation = None
         if self.generator is not None:
             print(f"Load generator from {self.generator}")
-            model_generation = T5ForConditionalGeneration.from_pretrained(self.generator, trust_remote_code=True)
+            model_generation = T5ForConditionalGeneration.from_pretrained(self.generator, device_map="auto", torch_dtype="auto", trust_remote_code=True)
             if self.gradient_checkpointing:
                 model_generation.gradient_checkpointing_enable()
             del model_generation.encoder  # we only need the decoder for generation. Deleting the encoder is optional, but saves memory.
-        return model_generation.to(torch.get_default_device())
+        return model_generation
     
     def _load_tokenizer(self):
         print(f"Load tokenizer from {self.encoder}")
-        tokenizer = AutoTokenizer.from_pretrained(self.encoder, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(self.encoder, device_map="auto", torch_dtype="auto", trust_remote_code=True)
         return tokenizer

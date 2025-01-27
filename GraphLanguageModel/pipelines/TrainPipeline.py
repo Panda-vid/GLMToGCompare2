@@ -71,17 +71,16 @@ class TrainPipeline:
         with tqdm(self.dataloader, postfix=f"Training {self.data_name}", 
                     total=len(self.dataloader) - batch_progress) as pbar:
             for (inputs, attention_mask), labels in pbar:
-                with autocast(True, dtype=torch.bfloat16):
-                    self.optimizer.zero_grad()
-                    encoder_outputs = self.encoder(**inputs)
-                    batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask).loss
-                    batch_loss.backward()
-                    self.optimizer.step()
-                    self.progress[1] += self.batch_size
-                    index += 1
-                    self.running_loss += batch_loss
-                    pbar.set_description_str(f"Average loss last batch: {batch_loss}")
-                    self._save_if_necessary(index)
+                self.optimizer.zero_grad()
+                encoder_outputs = self.encoder(**inputs)
+                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask).loss
+                batch_loss.backward()
+                self.optimizer.step()
+                self.progress[1] += self.batch_size
+                index += 1
+                self.running_loss += batch_loss
+                pbar.set_description_str(f"Average loss last batch: {batch_loss}")
+                self._save_if_necessary(index)
                   
     def eval_run(self):
         return self.eval_pipeline.eval() if self.eval_pipeline is not None else (float("inf"), 0)    

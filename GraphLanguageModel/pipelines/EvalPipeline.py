@@ -31,10 +31,9 @@ class EvalPipeline:
         self.encoder.eval()
         self.generator.eval()
         scores = []
-        with autocast(True, dtype=torch.bfloat16):
-            for i in range(self.repetitions):
-                score = self.eval_round()
-                scores.append(score.cpu())
+        for i in range(self.repetitions):
+            score = self.eval_round()
+            scores.append(score.cpu())
         scores = np.array(scores)
         return scores.mean(), scores.std()
 
