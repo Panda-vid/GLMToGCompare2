@@ -73,7 +73,7 @@ class TrainPipeline:
             for (inputs, attention_mask), labels in pbar:
                 self.optimizer.zero_grad()
                 encoder_outputs = self.encoder(**inputs)
-                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask).loss
+                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask, early_stopping=True).loss
                 batch_loss.backward()
                 self.optimizer.step()
                 self.progress[1] += self.batch_size
@@ -169,8 +169,7 @@ class Builder:
         optimizer = self.train_recipe.build(set(list(encoder.parameters()) + list(generator.parameters())))
         train_dataloader = DataLoader(self._create_dataset(encoder.data_processor, tokenizer), batch_size=self.train_recipe.batch_size,
                                 collate_fn=create_collate_fn(self.device, encoder.data_processor, tokenizer, self.model_recipe.max_generation_len),
-                                generator=torch.Generator(self.device),
-                                shuffle=True)
+                                shuffle=False)
         eval_pipeline = self._create_eval_pipeline(tokenizer, encoder, generator)
         return TrainPipeline(train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
                             optimizer, tokenizer, encoder, generator, self.checkpointing_interval,

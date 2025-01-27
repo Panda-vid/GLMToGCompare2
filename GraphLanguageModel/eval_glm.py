@@ -1,4 +1,5 @@
 import argparse
+import multiprocessing
 
 from utils.argparse import PathAction, problem_type_to_classification_bool
 from GraphLanguageModel.pipelines import EvalPipeline
