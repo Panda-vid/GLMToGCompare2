@@ -7,7 +7,6 @@ from typing import Callable
 from tqdm import tqdm
 
 from torch.utils.data import DataLoader
-from torch.cuda.amp import autocast
 
 from GraphLanguageModel.pipelines.data_handling import GraphDataset, create_collate_fn
 from GraphLanguageModel.pipelines.recipies import ModelRecipe
@@ -16,7 +15,7 @@ from GraphLanguageModel.pipelines.util import create_multiprocessed_accuracy, si
 
 class EvalPipeline:
     def __init__(self, dataloader: DataLoader, score_func: Callable[[torch.Tensor, torch.Tensor], float], repetitions: int, 
-                 tokenizer, encoder, generator, max_generation_len: int, data_name: str = "") -> None:
+                 tokenizer, encoder, generator, max_generation_len: int, data_name: str = "", device: str = "cpu") -> None:
         self.dataloader = dataloader
         self.data_name = data_name
         self.score_func = score_func
@@ -26,6 +25,7 @@ class EvalPipeline:
         self.encoder = encoder
         self.generator = generator
         self.max_generation_len = max_generation_len
+        self.device = device
 
     def eval(self):
         self.encoder.eval()
@@ -45,7 +45,7 @@ class EvalPipeline:
                     outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)
                     predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
                     labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-                    batch_score = torch.tensor(self.score_func(predictions, labels)).cuda()
+                    batch_score = torch.tensor(self.score_func(predictions, labels)).to(self.device)
                     scores.append(batch_score)
                     pbar.set_description_str(f"Score last batch: {batch_score}")
 
@@ -68,6 +68,7 @@ class Builder:
 
         self.reporting_interval = 5
         self.checkpointing_interval = 5
+        self.device = "cpu"
 
     def is_classification_task(self, is_classification: bool):
         self.is_classification = is_classification
@@ -96,14 +97,18 @@ class Builder:
     def set_score_function(self, score_function: Callable[[torch.Tensor, torch.Tensor], float]):
         self.score_func = score_function
         return self
+    
+    def set_device(self, device: str):
+        self.device = device
+        return self
 
     def build(self) -> EvalPipeline:
         if not self._buildable():
             raise ValueError(self._generate_error_msg())
-        tokenizer, encoder, generator = self.model_recipe.build()
+        tokenizer, encoder, generator = self.model_recipe.build(self.device)
         dataloader = DataLoader(self._create_dataset(encoder.data_processor, tokenizer), batch_size=self.batch_size, 
-                                collate_fn=create_collate_fn(torch.get_default_device(), encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
-        return EvalPipeline(dataloader, self.score_func, self.repetitions, tokenizer, encoder, generator, self.model_recipe.max_generation_len, data_name=self.eval_data.name)
+                                collate_fn=create_collate_fn(self.device, encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
+        return EvalPipeline(dataloader, self.score_func, self.repetitions, tokenizer, encoder, generator, self.model_recipe.max_generation_len, data_name=self.eval_data.name, device=self.device)
 
     def _buildable(self) -> bool:
         return self.is_classification is not None and self.model_recipe is not None

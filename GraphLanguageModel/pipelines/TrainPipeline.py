@@ -134,6 +134,7 @@ class Builder:
         self.model_recipe = None
         self.eval_data = None
         self.save_location = None
+        self.device = "cpu"
 
         self.checkpointing_interval = 5
 
@@ -156,15 +157,19 @@ class Builder:
     def set_checkpointing_interval(self, chcekpointing_interval: int):
         self.checkpointing_interval = chcekpointing_interval
         return self
+    
+    def set_device(self, device: str):
+        self.device = device
+        return self
 
     def build(self) -> TrainPipeline:
         if not self._buildable():
             raise ValueError(self._generate_error_msg())
-        tokenizer, encoder, generator = self.model_recipe.build()
+        tokenizer, encoder, generator = self.model_recipe.build(self.device)
         optimizer = self.train_recipe.build(set(list(encoder.parameters()) + list(generator.parameters())))
         train_dataloader = DataLoader(self._create_dataset(encoder.data_processor, tokenizer), batch_size=self.train_recipe.batch_size,
-                                collate_fn=create_collate_fn(torch.get_default_device(), encoder.data_processor, tokenizer, self.model_recipe.max_generation_len),
-                                generator=torch.Generator(device=torch.get_default_device()),
+                                collate_fn=create_collate_fn(self.device, encoder.data_processor, tokenizer, self.model_recipe.max_generation_len),
+                                generator=torch.Generator(self.device),
                                 shuffle=True)
         eval_pipeline = self._create_eval_pipeline(tokenizer, encoder, generator)
         return TrainPipeline(train_dataloader, self.train_recipe.num_epochs, self.train_recipe.batch_size, self.train_recipe.early_stopping, 
@@ -183,7 +188,7 @@ class Builder:
         if self.eval_data is not None:
             eval_dataset = GraphDataset(self.eval_data, encoder.data_processor, tokenizer, self.model_recipe.graph_encoder_strategy, self.train_recipe.is_classification)
             eval_dataloader = DataLoader(eval_dataset, batch_size=self.train_recipe.batch_size*2,
-                                    collate_fn=create_collate_fn(torch.get_default_device(), encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
+                                    collate_fn=create_collate_fn(self.device, encoder.data_processor, tokenizer, self.model_recipe.max_generation_len))
             return EvalPipeline(eval_dataloader, single_process_accuracy, 1, tokenizer, encoder, generator, self.model_recipe.max_generation_len, data_name=self.eval_data.name)
         else:
             return None

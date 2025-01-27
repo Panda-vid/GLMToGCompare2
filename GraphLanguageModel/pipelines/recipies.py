@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import Dict
-import torch
 from transformers import AutoTokenizer, AutoModel, T5ForConditionalGeneration
 
 from utils.oop import str_to_optimizer
@@ -38,21 +37,21 @@ class ModelRecipe:
         self.max_generation_len = max_generation_len
         self.gradient_checkpointing = gradient_checkpointing
 
-    def build(self):
+    def build(self, device: str):
         tokenizer = self._load_tokenizer()
-        encoder = self._load_encoder()
-        generator = self._load_generator()
+        encoder = self._load_encoder(device)
+        generator = self._load_generator(device)
         generator.shared = encoder.shared
         return tokenizer, encoder, generator
 
-    def _load_encoder(self):
+    def _load_encoder(self, device: str):
         print(f"Load encoder from {self.encoder}")
         model = AutoModel.from_pretrained(self.encoder, trust_remote_code=True, device_map="auto", torch_dtype="auto", revision='main')
         if self.gradient_checkpointing:
             model.gradient_checkpointing_enable()
-        return model
+        return model.to(device)
 
-    def _load_generator(self):
+    def _load_generator(self, device: str):
         model_generation = None
         if self.generator is not None:
             print(f"Load generator from {self.generator}")
@@ -60,7 +59,7 @@ class ModelRecipe:
             if self.gradient_checkpointing:
                 model_generation.gradient_checkpointing_enable()
             del model_generation.encoder  # we only need the decoder for generation. Deleting the encoder is optional, but saves memory.
-        return model_generation
+        return model_generation.to(device)
     
     def _load_tokenizer(self):
         print(f"Load tokenizer from {self.encoder}")
