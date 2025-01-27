@@ -2,13 +2,13 @@ export PYTHONPATH=.
 export TOKENIZERS_PARALLELISM=true
 
 # Default values
-ENCODER_MODELCARD="../GLM-flan-t5-large"
-GENERATOR_MODELCARD="google/flan-t5-large"
+ENCODER_MODELCARD="plenz/GLM-flan-t5-base"
+GENERATOR_MODELCARD="google/flan-t5-base"
 TRAIN_FILE="./data/preprocessed/structured_zeroshot-train-kilt.jsonl"
 SAVE_LOCATION="./saved_models/structured_zeroshot/flan-t5-large"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
-BATCH_SIZE=16
+BATCH_SIZE=4
 OPTIMIZER="AdamW"
 DEVICE="cuda"
 LEARNING_RATE="1e-4"

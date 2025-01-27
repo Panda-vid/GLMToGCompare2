@@ -73,7 +73,7 @@ class TrainPipeline:
             for (inputs, attention_mask), labels in pbar:
                 self.optimizer.zero_grad()
                 encoder_outputs = self.encoder(**inputs)
-                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask, early_stopping=True).loss
+                batch_loss = self.generator(encoder_outputs=encoder_outputs, labels=labels, attention_mask=attention_mask).loss
                 batch_loss.backward()
                 self.optimizer.step()
                 self.progress[1] += self.batch_size

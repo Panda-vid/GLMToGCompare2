@@ -4,7 +4,7 @@
 #SBATCH --job-name=glm-train
 #SBATCH --mem=20gb
 #SBATCH --partition=afkm
-#SBATCH --ntasks=4
+#SBATCH --ntasks=2
 #SBATCH --gres=gpu:1
 #SBATCH --output=output_%j.txt
 #SBATCH -e error_%j.txt
