@@ -42,7 +42,7 @@ class EvalPipeline:
         with tqdm(self.dataloader, postfix=f"Evaluating on {self.data_name}", total=len(self.dataloader)) as pbar:
             for (inputs, _), labels in pbar:
                 with torch.no_grad():
-                    outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len, early_stopping=True)
+                    outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), max_new_tokens=self.max_generation_len)
                     predictions = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
                     labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
                     batch_score = torch.tensor(self.score_func(predictions, labels)).to(self.device)

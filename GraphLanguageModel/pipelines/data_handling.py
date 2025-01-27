@@ -47,7 +47,7 @@ def create_collate_fn(device, data_processor, tokenizer, max_generation_len):
     def collate_fn(batch: Iterable[Tuple[Namespace, str]]):
         inputs, labels = tuple(zip(*batch))
         return (
-            data_processor.to_batch(data_instances=inputs, tokenizer=tokenizer, max_seq_len=256, device=device, return_attention_mask=True),
+            data_processor.to_batch(data_instances=inputs, tokenizer=tokenizer, max_seq_len=None, device=device, return_attention_mask=True),
             tokenizer(labels, return_tensors="pt", padding=True).input_ids
         )
     return collate_fn
