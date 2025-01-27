@@ -20,7 +20,7 @@ parser.add_argument("-gt", "--glm_type", help="Select whether to use a global or
 parser.add_argument("-b", "--batch_size", default=64, type=int)
 parser.add_argument("-r", "--repetitions", 
                     help="Determines how often the evaluation should be repeated.",
-                    default=5, type=int)
+                    default=1, type=int)
 parser.add_argument("-d", "--device", default='cpu', type=str)
 args = parser.parse_args()
 
