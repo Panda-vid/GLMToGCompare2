@@ -35,16 +35,20 @@ class ModelRecipe:
         self.generator = generator_modelcard
         self.graph_encoder_strategy = graph_encoder_strategy
         self.max_generation_len = max_generation_len
+        self.gradient_checkpointing = True
 
     def build(self, device: str):
         tokenizer = self._load_tokenizer()
         encoder = self._load_encoder(device)
         generator = self._load_generator(device)
+        generator.shared = encoder.shared
         return tokenizer, encoder, generator
 
     def _load_encoder(self, device: str):
         print(f"Load encoder from {self.encoder}")
         model = AutoModel.from_pretrained(self.encoder, trust_remote_code=True, revision='main', torch_dtype='auto', device_map="auto")
+        if self.gradient_checkpointing:
+                model.gradient_checkpointing_enable()
         return model.to(device)
 
     def _load_generator(self, device: str):
@@ -52,7 +56,8 @@ class ModelRecipe:
         if self.generator is not None:
             print(f"Load generator from {self.generator}")
             model_generation = T5ForConditionalGeneration.from_pretrained(self.generator, torch_dtype='auto', device_map="auto", trust_remote_code=True)
-            if 
+            if self.gradient_checkpointing:
+                model_generation.gradient_checkpointing_enable()
             del model_generation.encoder  # we only need the decoder for generation. Deleting the encoder is optional, but saves memory.
         return model_generation.to(device)
     
