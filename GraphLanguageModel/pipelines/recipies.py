@@ -52,6 +52,7 @@ class ModelRecipe:
         if self.generator is not None:
             print(f"Load generator from {self.generator}")
             model_generation = T5ForConditionalGeneration.from_pretrained(self.generator, torch_dtype='auto', device_map="auto", trust_remote_code=True)
+            if 
             del model_generation.encoder  # we only need the decoder for generation. Deleting the encoder is optional, but saves memory.
         return model_generation.to(device)
     

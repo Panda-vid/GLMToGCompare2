@@ -33,14 +33,13 @@ class EvalPipeline:
 
     def _get_file_total(self):
         with self.eval_data.open("r") as data_file:
-            total = len(data_file.readlines())
-        return int(total/self.batch_size) + 1
+            return len(data_file.readlines())
 
     def batcher(self):
         with self.eval_data.open("r") as data_file:
             batch = []
             labels = []
-            for i, instance in tqdm(enumerate(data_file)):
+            for i, instance in enumerate(data_file):
                 inp, label = self._convert_data_instance(json.loads(instance))
                 batch.append(inp)
                 labels.append(label)
@@ -62,7 +61,7 @@ class EvalPipeline:
 
     def eval_round(self):
         scores = []
-        with tqdm(self.batcher(), postfix=f"Evaluating on {self.eval_data.name}", total=self.total) as pbar:
+        with tqdm(self.batcher(), postfix=f"Evaluating on {self.eval_data.name}", total=int(self.total/self.batch_size) + 1) as pbar:
             for inputs, labels in pbar:
                 with torch.no_grad():
                     outputs = self.generator.generate(encoder_outputs=self.encoder(**inputs), output_scores=True, max_new_tokens=self.max_generation_len, early_stopping=True)[:, :labels.shape[1]]
