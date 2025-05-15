@@ -90,9 +90,19 @@ class Preprocessor:
     def _preprocess_data_point(self, data_point: Dict) -> Tuple[Dict, str]:
         return self.data_point_processing_func(data_point)
     
-    def _get_neighborhood_graphs(self, source_entities: List[str]) -> List[List[Tuple[str, str, str]]]:
-        label_to_id, source_entities = create_entity_to_wikidata_id(source_entities)
-        neighborhoods = request_direct_neighborhoods_of_entities(list(label_to_id.items()))
+    def _get_neighborhood_graphs(self, source_entities: List[str]|List[Dict]) -> List[List[Tuple[str, str, str]]]:
+        if type(source_entities[0]) is dict:
+            anchor_entities = []
+            neighborhoods = {}
+            for neighborhood_sources in source_entities:
+                anchor = list(neighborhood_sources.keys())[0]
+                partial_neighborhoods = request_direct_neighborhoods_of_entities(list(neighborhood_sources.items()))
+                neighborhoods[anchor] = [tup for neigh in partial_neighborhoods.values() for tup in neigh]
+                anchor_entities.append(anchor)
+            source_entities = anchor_entities
+        else:
+            label_to_id, source_entities = create_entity_to_wikidata_id(source_entities)
+            neighborhoods = request_direct_neighborhoods_of_entities(list(label_to_id.items()))
         neighborhood_graphs = []
         for ent in source_entities:
             neighborhood_graphs.append(self._translate_relation_ids(neighborhoods[ent]) if ent is not None else [])

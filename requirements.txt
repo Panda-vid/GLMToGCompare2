@@ -13,3 +13,4 @@ qwikidata
 requests
 textblob
 deepspeed
+matplotlib

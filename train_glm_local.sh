@@ -2,21 +2,21 @@ export PYTHONPATH=.
 export TOKENIZERS_PARALLELISM=true
 
 # Default values
-ENCODER_MODELCARD="plenz/GLM-flan-t5-base"
+ENCODER_MODELCARD="/GLM-flan-t5-base"
 GENERATOR_MODELCARD="google/flan-t5-base"
 TRAIN_FILE="./data/preprocessed/structured_zeroshot-train-kilt.jsonl"
-SAVE_LOCATION="./saved_models/structured_zeroshot/flan-t5-large"
+SAVE_LOCATION="./saved_models/model_compare/flan-t5-base"
 PROBLEM_TYPE="classification"
 GLM_TYPE="global"
-BATCH_SIZE=4
+BATCH_SIZE=16
 OPTIMIZER="AdamW"
 DEVICE="cuda"
-LEARNING_RATE="1e-4"
+LEARNING_RATE="1e-8"
 NUM_EPOCHS=5
 EARLY_STOPPING=2
 NEIGHBORHOOD_SIZE=10
 EVAL_FILE="./data/preprocessed/structured_zeroshot-dev-kilt.jsonl"
-CHECKPOINTING_INTERVAL=500
+CHECKPOINTING_INTERVAL=2500
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -90,9 +90,12 @@ source ./.venv/bin/activate
 PYTHON_PROGRAM=./GraphLanguageModel/train_glm.py
 
 # Start the Python program with inputs
-echo python "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
-        -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
-        -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
-python "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
-        -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
-        -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL"
+for i in $(seq 1 2);
+do
+    echo python "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+            -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
+            -ns "$NEIGHBORHOOD_SIZE" -ef "$EVAL_FILE" -c "$CHECKPOINTING_INTERVAL" -l --trace_loss --gradient_checkpointing
+    timeout 4200 python "$PYTHON_PROGRAM" "$ENCODER_MODELCARD" "$GENERATOR_MODELCARD" "$TRAIN_FILE" "$SAVE_LOCATION" -pt "$PROBLEM_TYPE" \
+            -gt "$GLM_TYPE" -d "$DEVICE" -b "$BATCH_SIZE" -o "$OPTIMIZER" -lr "$LEARNING_RATE" -ne "$NUM_EPOCHS" -es "$EARLY_STOPPING" \
+            -ns "$NEIGHBORHOOD_SIZE" -c "$CHECKPOINTING_INTERVAL" --trace_loss --gradient_checkpointing
+done

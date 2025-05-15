@@ -18,7 +18,9 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "env": {"PYTHONPATH": "${workspaceFolder}/GraphLanguageModel/training/"}
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "args": ["plenz/GLM-flan-t5-base", "google/flan-t5-base", "./data/preprocessed/qald-9-train-en.jsonl", "./saved_models/qald/flan-t5-base", "-pt", "generation", "-b", "4", "-d", "cuda", "-c", "250", "--no-gradient_checkpointing", "--trace_loss"],
+            "justMyCode": false
         }
     ]
 }

@@ -19,7 +19,7 @@ def create_entity_to_wikidata_id(entities: List[str]) -> Dict:
         ent_label = ent["title"]
         if ent_label not in ent_to_wiki_id:
             ent_to_wiki_id, entities = normalize_label(ent_label, entities, ent_to_wiki_id)
-        assert ent_label in ent_to_wiki_id, f"Cant entity label to wikidata id translation dict because '{ent_label}' is not in {list(ent_to_wiki_id)}."
+        assert ent_label in ent_to_wiki_id, f"Cant create entity label to wikidata id translation dict because '{ent_label}' is not in {list(ent_to_wiki_id)}."
         if "pageprops" in ent.keys():
             if "wikibase_item" in ent["pageprops"].keys():
                 ent_to_wiki_id[ent_label] = ent["pageprops"]["wikibase_item"]

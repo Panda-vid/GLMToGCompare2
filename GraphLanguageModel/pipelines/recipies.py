@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Dict
-from transformers import AutoTokenizer, AutoModel, T5ForConditionalGeneration
+from transformers import AutoTokenizer, AutoModel, T5ForConditionalGeneration, AutoConfig
 
+from GraphLanguageModel.pipelines.util import ModelCheckpoint
 from utils.oop import str_to_optimizer
 
 class TrainRecipe:
@@ -28,14 +29,15 @@ class TrainRecipe:
 
 
 class ModelRecipe:
-    def __init__(self, encoder_modelcard: str, graph_encoder_strategy: str , 
-                 generator_modelcard: str = None, max_generation_len: int = 30, 
-                 gradient_checkpointing: bool = True):
+    def __init__(self, encoder_modelcard: str, graph_encoder_strategy: str, 
+                 generator_modelcard: str, model_checkpoint: ModelCheckpoint, 
+                 max_generation_len: int = 30, gradient_checkpointing: bool = True):
         self.encoder = encoder_modelcard
         self.generator = generator_modelcard
         self.graph_encoder_strategy = graph_encoder_strategy
         self.max_generation_len = max_generation_len
         self.gradient_checkpointing = gradient_checkpointing
+        self.model_checkpoint = model_checkpoint
 
     def build(self, device: str):
         tokenizer = self._load_tokenizer()

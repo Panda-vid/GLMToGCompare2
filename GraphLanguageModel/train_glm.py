@@ -1,8 +1,8 @@
 import argparse
-import multiprocessing
 
 import torch
 
+from GraphLanguageModel.pipelines.util import ModelCheckpoint
 from utils.argparse import KeywordAction, PathAction, problem_type_to_classification_bool
 from GraphLanguageModel.pipelines import TrainPipeline
 from GraphLanguageModel.pipelines.recipies import ModelRecipe, TrainRecipe
@@ -11,16 +11,17 @@ from GraphLanguageModel.pipelines.recipies import ModelRecipe, TrainRecipe
 parser = argparse.ArgumentParser(prog="train_glm", usage="%(prog)s [options]")
 parser.add_argument("encoder_modelcard", 
                     help="The (huggingface modelhub) location of the encoder model.", 
-                    type=str)
+                    type=str, default="")
 parser.add_argument("generator_modelcard", 
                     help="The (huggingface modelhub) location of the generator model.", 
-                    type=str)
+                    type=str, default="")
 parser.add_argument("train_file", 
                     help="Location of the preprocessed train file.", 
                     type=str, action=PathAction)
 parser.add_argument("save_location", 
                     help="Location of the saved model and training information.", 
                     type=str, action=PathAction)
+parser.add_argument("-l", "--load_model", action=argparse.BooleanOptionalAction, default=False)
 parser.add_argument("-pt", "--problem_type", choices=["classification", "generation"], default="classification", type=str)
 parser.add_argument("-gt", "--glm_type", help="Select whether to use a global or local GLM.", choices=["local", "global"], default="global", type=str)
 parser.add_argument("-b", "--batch_size", default=64, type=int)
@@ -53,16 +54,26 @@ parser.add_argument("-c", "--checkpointing_interval",
                     default=2000, type=int)
 parser.add_argument("--gradient_checkpointing",
                     help="Enables/Disables gradient chckpointing which reduces memory usage by computing gradients on demand. Gradient checkpointing decreases training speed by approx. 20 percent.",
-                    action=argparse.BooleanOptionalAction, default=True)
+                    action=argparse.BooleanOptionalAction)
+parser.add_argument("--trace_loss",
+                    help="Write batch losses into file for further analysis. The trace will be saved inside the saves", 
+                    action=argparse.BooleanOptionalAction)
 args = parser.parse_args()
 
 
 if __name__ == "__main__":
+    model_checkpoint = ModelCheckpoint(args.save_location)
+
+    if args.load_model:
+        args.encoder_modelcard = model_checkpoint.latest_model_save.encoder_location
+        args.generator_modelcard = model_checkpoint.latest_model_save.generator_location
+
     train_recipe = TrainRecipe(problem_type_to_classification_bool(args.problem_type), args.train_file, args.num_epochs, 
                                args.batch_size, args.early_stopping, args.optimizer, args.optimizer_kwargs, 
                                args.learning_rate, args.neighborhood_size)
-    model_recipe = ModelRecipe(args.encoder_modelcard, args.glm_type, args.generator_modelcard, args.gradient_checkpointing)
-    train_pipeline_builder = TrainPipeline.Builder().add_model_recipe(model_recipe).add_train_recipe(train_recipe).add_save_location(args.save_location).set_checkpointing_interval(args.checkpointing_interval).set_device(args.device)
+    model_recipe = ModelRecipe(args.encoder_modelcard, args.glm_type, args.generator_modelcard, model_checkpoint, 
+                               gradient_checkpointing=args.gradient_checkpointing)
+    train_pipeline_builder = TrainPipeline.Builder().add_model_recipe(model_recipe).add_train_recipe(train_recipe).add_save_location(args.save_location).set_checkpointing_interval(args.checkpointing_interval).set_device(args.device).trace_loss(args.trace_loss)
     if args.eval_file is not None:
         train_pipeline_builder = train_pipeline_builder.set_eval_data(args.eval_file)
     train_pipeline = train_pipeline_builder.build()

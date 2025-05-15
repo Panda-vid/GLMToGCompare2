@@ -16,7 +16,7 @@ def generator(source_file: Path):
         yield i, data_point
 
 
-def preprocess(data_point: str) -> Tuple[Dict, str]: 
+def preprocess(data_point: Dict) -> Tuple[Dict, str]: 
     processed = {}
     processed["graph"] = []
     processed["output"] = data_point["query"]["sparql"]
